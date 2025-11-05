@@ -62,6 +62,10 @@ SPECIAL COMMANDS
 #help                       # Show help
 #assist                     # Toggle Claude fallback
 #assist-stats               # Show fallback statistics
+#performance                # Show performance metrics
+#correct                    # Mark last response correct
+#incorrect                  # Mark last response incorrect
+#reset_metrics              # Reset performance data
 #stats                      # Show memory statistics
 #reset                      # Clear conversation memory
 #pwd                        # Show current directory
