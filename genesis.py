@@ -18,6 +18,7 @@ from genesis_bridge import GenesisBridge, execute_remote_code
 from uncertainty_detector import UncertaintyDetector
 from claude_fallback import ClaudeFallback
 from performance_monitor import PerformanceMonitor
+from learning_memory import LearningMemory
 
 # ANSI color codes for terminal output
 class Colors:
@@ -44,17 +45,27 @@ class Genesis:
         self.uncertainty = UncertaintyDetector()
         self.claude_fallback = ClaudeFallback()
         self.performance = PerformanceMonitor()
+        self.learning = LearningMemory()
         self.llama_path = "./llama.cpp/llama-cli"
         self.model_path = "./models/CodeLlama-7B-Instruct.Q4_K_M.gguf"
         self.running = True
 
+        # Genesis identity and system prompt
+        self.identity = """I'm Genesis, a local AI assistant running entirely on your device using the CodeLlama-7B model. I can execute code, manage files, and help with development tasks - all while keeping your data private and working offline."""
+
         # System prompt template optimized for CodeLlama-Instruct
-        self.system_prompt = """You are an action-oriented AI assistant. When asked to do something, DO IT directly rather than explaining how.
+        self.system_prompt = """You are Genesis, a local AI assistant running on the user's device.
+
+IDENTITY: When asked who you are or to identify yourself, respond:
+"I'm Genesis, a local AI assistant running entirely on your device using the CodeLlama-7B model."
 
 For file/directory operations, use these commands:
 - LIST: /path/to/dir - list directory contents
 - READ: /path/to/file - read file
 - WRITE: /path/to/file - write file (followed by content in code block)
+- SEARCH: pattern in /path - search for text in files
+
+IMPORTANT: Only use READ: to read files if explicitly asked. Do NOT read README.md unless user specifically requests it.
 
 For shell commands (ls, pwd, cat, etc.), execute them directly.
 Keep responses brief and action-focused."""
@@ -69,7 +80,7 @@ Keep responses brief and action-focused."""
         print("Powered by CodeLlama-7B running on Samsung S24 Ultra")
         print(f"{assist_color}Claude Assist: {assist_status}{Colors.RESET}{Colors.CYAN}")
         print(f"{'=' * 60}{Colors.RESET}\n")
-        print(f"{Colors.DIM}Commands: #exit | #help | #assist | #performance | #correct | #incorrect{Colors.RESET}\n")
+        print(f"{Colors.DIM}Commands: #exit | #help | #assist | #performance | #memory{Colors.RESET}\n")
 
     def print_help(self):
         """Display help information"""
@@ -90,6 +101,11 @@ Keep responses brief and action-focused."""
 {Colors.GREEN}#correct{Colors.RESET}       - Mark last response as correct
 {Colors.GREEN}#incorrect{Colors.RESET}     - Mark last response as incorrect
 {Colors.GREEN}#reset_metrics{Colors.RESET} - Reset all performance metrics
+
+{Colors.BOLD}Memory & Learning:{Colors.RESET}
+{Colors.GREEN}#memory{Colors.RESET}        - Show persistent memory summary
+{Colors.GREEN}#prune_memory{Colors.RESET}  - Manually trigger memory pruning
+{Colors.GREEN}#export_memory{Colors.RESET} - Export memory backup
 
 {Colors.BOLD}File Operations:{Colors.RESET}
 You can ask Genesis to read, write, list, or manipulate files.
@@ -296,6 +312,15 @@ print(factorial(5))
         """
         input_lower = user_input.lower().strip()
 
+        # Identity queries
+        identity_triggers = [
+            "who are you", "identify yourself", "what are you",
+            "genesis identify", "tell me about yourself",
+            "who is genesis", "what is genesis"
+        ]
+        if any(trigger in input_lower for trigger in identity_triggers):
+            return True, self.identity
+
         # List directory commands
         if input_lower in ["ls", "list files", "show files", "list directory"]:
             return True, self.tools.list_directory(".")
@@ -407,11 +432,28 @@ print(factorial(5))
             result = self.tools.list_directory(dirpath)
             results.append(f"\n{Colors.BLUE}[Directory List]{Colors.RESET}\n{result}")
 
+        # Check for SEARCH commands
+        search_pattern = r'SEARCH:\s*([^\n]+)'
+        for match in re.finditer(search_pattern, text):
+            search_spec = match.group(1).strip()
+            # Parse: pattern in /path
+            if " in " in search_spec:
+                parts = search_spec.split(" in ", 1)
+                pattern = parts[0].strip()
+                path = parts[1].strip() if len(parts) > 1 else "."
+            else:
+                pattern = search_spec
+                path = "."
+            result = self.tools.grep_files(pattern, path=path)
+            results.append(f"\n{Colors.CYAN}[Search Results]{Colors.RESET}\n{result}")
+
         return "".join(results)
 
     def process_code_execution(self, text: str) -> str:
         """
         Extract and execute Python code blocks
+
+        IMPORTANT: Only executes code blocks that don't contain tool directives
 
         Args:
             text: LLM response text
@@ -426,6 +468,15 @@ print(factorial(5))
 
         results = []
         for i, code in enumerate(code_blocks, 1):
+            # Check if code block contains tool directives
+            tool_directives = ['READ:', 'WRITE:', 'LIST:', 'SEARCH:']
+            has_tool_directive = any(directive in code for directive in tool_directives)
+
+            if has_tool_directive:
+                # Skip execution - this is a tool directive, not Python code
+                print(f"\n{Colors.DIM}[Skipping Code Block {i} - contains tool directive]{Colors.RESET}")
+                continue
+
             print(f"\n{Colors.YELLOW}[Executing Code Block {i}]{Colors.RESET}")
             print(f"{Colors.DIM}{code[:200]}{'...' if len(code) > 200 else ''}{Colors.RESET}\n")
 
@@ -504,6 +555,20 @@ print(factorial(5))
             print(f"\n{Colors.CYAN}✓ All performance metrics reset{Colors.RESET}\n")
             return
 
+        if user_input.lower() == "#memory":
+            print(self.learning.get_memory_summary())
+            return
+
+        if user_input.lower() == "#prune_memory":
+            self.learning.manual_prune()
+            print(f"\n{Colors.CYAN}✓ Memory pruned{Colors.RESET}\n")
+            return
+
+        if user_input.lower() == "#export_memory":
+            export_path = self.learning.export_memory()
+            print(f"\n{Colors.GREEN}✓ Memory exported to {export_path}{Colors.RESET}\n")
+            return
+
         # Start performance tracking
         query_id = self.performance.start_query(user_input)
 
@@ -513,6 +578,17 @@ print(factorial(5))
             print(f"\n{Colors.BOLD}Genesis:{Colors.RESET}")
             print(result)
             self.memory.add_interaction(user_input, result)
+
+            # Store in learning memory
+            self.learning.add_conversation(
+                user_input=user_input,
+                assistant_response=result,
+                metadata={
+                    "was_direct_command": True,
+                    "confidence_score": 1.0,
+                    "had_fallback": False
+                }
+            )
 
             # Record direct command performance (instant)
             self.performance.end_query(
@@ -655,6 +731,17 @@ print(factorial(5))
             full_response += "\n" + code_results
 
         self.memory.add_interaction(user_input, full_response)
+
+        # Store in learning memory with metadata
+        self.learning.add_conversation(
+            user_input=user_input,
+            assistant_response=full_response,
+            metadata={
+                "had_fallback": claude_response is not None,
+                "confidence_score": uncertainty_analysis.get('confidence_score'),
+                "was_direct_command": False
+            }
+        )
 
         # Record query performance
         self.performance.end_query(

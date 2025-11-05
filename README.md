@@ -20,6 +20,7 @@ Genesis is a local AI assistant powered by CodeLlama-7B that runs on your Samsun
 Genesis/
 ├── genesis.py                # Main controller
 ├── memory.py                 # Conversation memory manager
+├── learning_memory.py        # Persistent learning & memory system
 ├── executor.py               # Safe code execution
 ├── tools.py                  # File system tools (read/write/edit/search)
 ├── uncertainty_detector.py   # Confidence scoring
@@ -29,8 +30,9 @@ Genesis/
 ├── llama.cpp/                # LLM inference engine
 ├── models/                   # LLM model storage
 ├── data/                     # Performance metrics & training data
+│   └── memory/               # Persistent memory storage
 ├── logs/                     # Fallback and error logs
-└── memory.json               # Persistent conversation history
+└── memory.json               # Session conversation history
 ```
 
 ## Installation
@@ -87,6 +89,11 @@ Genesis/
 - `#correct` - Mark last response as correct
 - `#incorrect` - Mark last response as incorrect
 - `#reset_metrics` - Reset all performance data
+
+**Memory & Learning:**
+- `#memory` - Show persistent memory summary
+- `#prune_memory` - Manually trigger memory pruning
+- `#export_memory` - Export memory backup
 
 ### File Operations
 
@@ -346,6 +353,33 @@ File system tools:
 - list_directory, create_directory
 - delete_file, delete_directory
 - file_info, change_directory
+
+## Memory & Learning System
+
+Genesis includes a persistent memory system that enables continuous learning:
+
+**Features:**
+- Stores conversation history across sessions
+- Tracks performance metrics and user feedback
+- Learns from corrections and improvements
+- Intelligent auto-pruning to prevent bloat
+- Complete privacy (100% local storage)
+
+**Storage:**
+```
+data/memory/
+├── conversation_memory.json    # Conversation history
+├── learning_log.json           # Learning events
+├── performance_history.json    # Performance metrics
+└── user_preferences.json       # User settings
+```
+
+**Commands:**
+- `#memory` - View memory summary
+- `#prune_memory` - Optimize storage
+- `#export_memory` - Backup memory data
+
+**See:** [MEMORY_SYSTEM.md](MEMORY_SYSTEM.md) for complete documentation
 
 ## License
 

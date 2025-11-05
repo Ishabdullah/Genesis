@@ -66,6 +66,9 @@ SPECIAL COMMANDS
 #correct                    # Mark last response correct
 #incorrect                  # Mark last response incorrect
 #reset_metrics              # Reset performance data
+#memory                     # Show persistent memory summary
+#prune_memory               # Manually trigger memory pruning
+#export_memory              # Export memory backup
 #stats                      # Show memory statistics
 #reset                      # Clear conversation memory
 #pwd                        # Show current directory
@@ -99,6 +102,8 @@ GENESIS_ACTION_ORIENTED_UPDATE.md   - Action features guide
 CAPABILITY_COMPARISON.md            - vs Claude Code comparison
 HONEST_COMMUNICATION.md             - Transparency system
 GENESIS_COMPLETE_UPGRADE.md         - Complete upgrade guide
+MEMORY_SYSTEM.md                    - Memory & learning guide
+PERFORMANCE_MONITORING.md           - Performance tracking guide
 SESSION_SUMMARY.md                  - Session overview
 
 ═══════════════════════════════════════════════════════════════
