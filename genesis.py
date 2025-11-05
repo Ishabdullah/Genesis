@@ -144,11 +144,12 @@ Example: "Write a script to calculate fibonacci numbers"
 
     def check_llama_cpp(self) -> bool:
         """Check if llama.cpp is available"""
-        # Try multiple possible binary names
+        # Try multiple possible binary names (new CMake build locations)
         possible_paths = [
+            "./llama.cpp/build/bin/llama-cli",
+            "./llama.cpp/build/bin/main",
             "./llama.cpp/llama-cli",
-            "./llama.cpp/main",
-            "./llama.cpp/build/bin/llama-cli"
+            "./llama.cpp/main"
         ]
 
         for path in possible_paths:

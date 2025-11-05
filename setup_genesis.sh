@@ -15,7 +15,7 @@ pkg install git python python-pip nodejs clang cmake wget curl vim nano build-es
 
 echo ""
 echo "[2/6] Installing Python dependencies..."
-pip install --upgrade pip
+# Don't upgrade pip in Termux - it breaks python-pip package
 pip install colorama prompt_toolkit flask requests
 
 # Step 2: Create Genesis directory structure
@@ -40,9 +40,12 @@ fi
 
 cd llama.cpp
 echo "Building llama.cpp (this may take 5-10 minutes)..."
-make clean
-make -j$(nproc)
-cd ..
+# Use CMake build system
+mkdir -p build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake --build . --config Release -j$(nproc)
+cd ../..
 
 # Step 4: Link the LLM model
 echo ""
