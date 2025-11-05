@@ -197,36 +197,32 @@ Example: "Write a script to calculate fibonacci numbers"
             context = self.memory.get_context_string()
 
             # Add instruction about using tools
-            tool_instructions = """You have access to these commands:
-- LIST: /path - to list directory contents
-- READ: /path/file - to read files
-- Write Python code in ```python blocks to execute
+            tool_instructions = """You are Genesis. Be direct, concise, and focused.
 
-Be action-oriented. If user asks you to list, read, or do something - use these commands directly.
+Available tools:
+- LIST: /path - list directory
+- READ: /path/file - read file
+- SEARCH: pattern in /path - search content
+- Python code in ```python blocks
 
-Examples:
-User: "list files in home"
-Assistant: LIST: ~
-
-User: "read config.json"
-Assistant: READ: config.json
-
-User: "calculate 5 factorial"
-Assistant: ```python
-def factorial(n):
-    return 1 if n <= 1 else n * factorial(n-1)
-print(factorial(5))
-```
+Rules:
+1. Answer the user's CURRENT question only
+2. Do NOT repeat previous conversations or examples
+3. Be brief and action-oriented
+4. Use tools when appropriate for the task
+5. For math: calculate and give answer only
+6. For string operations: perform and show result only
+7. For code: write clean, working code without extra commentary
 """
 
-            # Use CodeLlama-Instruct format with context
+            # Use CodeLlama-Instruct format with minimal context
             if context:
-                # Include last 2 exchanges for continuity
-                recent = context.split('\n')[-8:]  # Last 2 Q&A pairs (4 lines each)
+                # Include only last exchange for continuity (reduced from 2 to 1)
+                recent = context.split('\n')[-4:]  # Last 1 Q&A pair (4 lines)
                 context_str = '\n'.join(recent)
-                full_prompt = f"[INST] {tool_instructions}\n\nPrevious context:\n{context_str}\n\nNow answer: {user_prompt} [/INST]"
+                full_prompt = f"[INST] {tool_instructions}\n\nLast exchange:\n{context_str}\n\nCurrent question: {user_prompt} [/INST]"
             else:
-                full_prompt = f"[INST] {tool_instructions}\n\n{user_prompt} [/INST]"
+                full_prompt = f"[INST] {tool_instructions}\n\nQuestion: {user_prompt} [/INST]"
 
             # Call llama.cpp with balanced parameters
             cmd = [
@@ -395,6 +391,61 @@ print(factorial(5))
             success, output = self.execute_shell_command(user_input)
             return True, output
 
+        # Simple math calculations
+        if any(word in input_lower for word in ["what is", "calculate", "compute", "solve"]):
+            # Extract potential math expression
+            import re
+            # Look for patterns like "what is 8 × 7 + 6" or "calculate 2+2"
+            math_patterns = [
+                r"what\s+is\s+([0-9\s+\-*/×÷().\^]+)",
+                r"calculate\s+([0-9\s+\-*/×÷().\^]+)",
+                r"compute\s+([0-9\s+\-*/×÷().\^]+)",
+                r"solve\s+([0-9\s+\-*/×÷().\^]+)"
+            ]
+
+            for pattern in math_patterns:
+                match = re.search(pattern, input_lower)
+                if match:
+                    expr = match.group(1).strip()
+                    # Replace unicode math symbols
+                    expr = expr.replace('×', '*').replace('÷', '/')
+                    expr = expr.replace('^', '**')
+                    try:
+                        result = eval(expr, {"__builtins__": {}})
+                        return True, f"The answer is {result}"
+                    except:
+                        pass  # Fall through to LLM if can't evaluate
+
+        # String reversal
+        if "reverse" in input_lower and "string" in input_lower:
+            # Extract the string to reverse
+            import re
+            # Look for patterns like "reverse this string: Genesis" or "reverse 'hello'"
+            patterns = [
+                r"reverse\s+(?:this\s+)?string:?\s*['\"]?([^'\"]+?)['\"]?\s*$",
+                r"reverse\s+['\"]([^'\"]+)['\"]",
+            ]
+
+            for pattern in patterns:
+                match = re.search(pattern, user_input, re.IGNORECASE)
+                if match:
+                    text = match.group(1).strip()
+                    reversed_text = text[::-1]
+                    return True, f"Reversed: {reversed_text}"
+
+        # Memory recall - check learning memory for context
+        if any(phrase in input_lower for phrase in ["what's my", "what is my", "do you remember", "recall"]):
+            # Get relevant context from learning memory
+            relevant = self.learning.get_relevant_context(user_input, max_results=3)
+            if relevant:
+                # Check if any conversation contains the answer
+                for conv in relevant:
+                    if "favorite" in input_lower and "favorite" in conv.get("user_input", "").lower():
+                        # Extract the answer from the original conversation
+                        response = conv.get("assistant_response", "")
+                        if response:
+                            return True, f"Based on our previous conversation: {response}"
+
         # Not a direct command
         return False, ""
 
@@ -454,6 +505,7 @@ print(factorial(5))
         Extract and execute Python code blocks
 
         IMPORTANT: Only executes code blocks that don't contain tool directives
+        All code blocks are combined into a single execution to preserve state
 
         Args:
             text: LLM response text
@@ -466,28 +518,33 @@ print(factorial(5))
         if not code_blocks:
             return ""
 
-        results = []
+        # Filter out code blocks with tool directives
+        tool_directives = ['READ:', 'WRITE:', 'LIST:', 'SEARCH:']
+        valid_blocks = []
+
         for i, code in enumerate(code_blocks, 1):
-            # Check if code block contains tool directives
-            tool_directives = ['READ:', 'WRITE:', 'LIST:', 'SEARCH:']
             has_tool_directive = any(directive in code for directive in tool_directives)
-
             if has_tool_directive:
-                # Skip execution - this is a tool directive, not Python code
                 print(f"\n{Colors.DIM}[Skipping Code Block {i} - contains tool directive]{Colors.RESET}")
-                continue
-
-            print(f"\n{Colors.YELLOW}[Executing Code Block {i}]{Colors.RESET}")
-            print(f"{Colors.DIM}{code[:200]}{'...' if len(code) > 200 else ''}{Colors.RESET}\n")
-
-            success, output = self.executor.execute_code(code)
-
-            if success:
-                results.append(f"{Colors.GREEN}✓ Execution successful:{Colors.RESET}\n{output}")
             else:
-                results.append(f"{Colors.RED}✗ Execution failed:{Colors.RESET}\n{output}")
+                valid_blocks.append(code)
 
-        return "\n\n".join(results)
+        if not valid_blocks:
+            return ""
+
+        # Combine all valid code blocks into one execution
+        # This preserves variables and functions between blocks
+        combined_code = "\n\n".join(valid_blocks)
+
+        print(f"\n{Colors.YELLOW}[Executing {len(valid_blocks)} code block(s)]{Colors.RESET}")
+        print(f"{Colors.DIM}{combined_code[:200]}{'...' if len(combined_code) > 200 else ''}{Colors.RESET}\n")
+
+        success, output = self.executor.execute_code(combined_code)
+
+        if success:
+            return f"{Colors.GREEN}✓ Execution successful:{Colors.RESET}\n{output}"
+        else:
+            return f"{Colors.RED}✗ Execution failed:{Colors.RESET}\n{output}"
 
     def process_input(self, user_input: str):
         """
