@@ -149,14 +149,68 @@ class ClaudeFallback:
             prompt: Prompt for Claude
 
         Returns:
-            Claude's response or None
+            Claude's response or None if Claude is not available
         """
-        # OPTION 1: If Claude Code is the parent process, write to stdout with marker
-        # The parent can intercept and respond
+        # Try multiple connection methods
 
-        # OPTION 2: If we have API access, use it here
-        # import anthropic
-        # client = anthropic.Anthropic(api_key=...)
+        # METHOD 1: Check if Claude Code bridge is running
+        try:
+            import requests
+            response = requests.post(
+                "http://127.0.0.1:5050/claude_assist",
+                json={"prompt": prompt},
+                timeout=5
+            )
+            if response.status_code == 200:
+                return response.json().get("response")
+        except:
+            pass  # Bridge not available
+
+        # METHOD 2: Check for Claude API key
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if api_key:
+            try:
+                import anthropic
+                client = anthropic.Anthropic(api_key=api_key)
+                message = client.messages.create(
+                    model="claude-sonnet-4-5-20250929",
+                    max_tokens=1024,
+                    messages=[{"role": "user", "content": prompt}]
+                )
+                return message.content[0].text
+            except Exception as e:
+                print(f"⚠ Claude API error: {e}")
+                pass  # API not available or error
+
+        # METHOD 3: Use marker file for Claude Code to monitor
+        request_file = Path("/tmp/genesis_needs_claude.txt")
+        response_file = Path("/tmp/claude_response.txt")
+
+        try:
+            # Write request
+            with open(request_file, 'w') as f:
+                f.write(prompt)
+
+            # Wait for response (max 30 seconds)
+            import time
+            for _ in range(30):
+                if response_file.exists():
+                    with open(response_file, 'r') as f:
+                        claude_response = f.read()
+                    response_file.unlink()  # Clean up
+                    request_file.unlink()
+                    return claude_response
+                time.sleep(1)
+
+            # Timeout - clean up
+            if request_file.exists():
+                request_file.unlink()
+
+        except Exception as e:
+            print(f"⚠ File communication error: {e}")
+
+        # All methods failed - Claude is not available
+        return None
         # response = client.messages.create(...)
 
         # OPTION 3: Use a communication file that Claude Code monitors

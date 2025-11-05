@@ -502,7 +502,42 @@ print(factorial(5))
                 uncertainty_analysis
             )
 
-            # Log the fallback event
+            # Check if Claude was reachable
+            if claude_response is None:
+                print(f"\n{Colors.RED}⚠ Unable to reach Claude Code for assistance{Colors.RESET}")
+                print(f"{Colors.YELLOW}Genesis cannot complete this task reliably.{Colors.RESET}\n")
+                print(f"{Colors.DIM}Reasons:{Colors.RESET}")
+                print(f"  • Task complexity exceeds Genesis capabilities")
+                print(f"  • Confidence score: {uncertainty_analysis['confidence_score']:.2f} (< 0.60 threshold)")
+                print(f"  • Claude Code is not available for fallback\n")
+                print(f"{Colors.CYAN}Suggestions:{Colors.RESET}")
+                print(f"  1. Try a simpler version of your request")
+                print(f"  2. Break the task into smaller steps")
+                print(f"  3. Use direct commands (ls, git, find, grep)")
+                print(f"  4. Set up Claude API key: export ANTHROPIC_API_KEY=your_key")
+                print(f"  5. Ensure Claude Code bridge is running\n")
+
+                # Still log the attempt
+                self.claude_fallback.log_fallback_event(
+                    user_input,
+                    response,
+                    None,  # Claude response was None
+                    uncertainty_analysis
+                )
+
+                # Show the uncertain response anyway with disclaimer
+                print(f"{Colors.DIM}Showing Genesis's uncertain response (use with caution):{Colors.RESET}\n")
+                print(f"{Colors.BOLD}Genesis (uncertain):{Colors.RESET}")
+                print(response)
+
+                # Save to memory with warning
+                self.memory.add_interaction(
+                    user_input,
+                    f"⚠ UNCERTAIN RESPONSE (confidence: {uncertainty_analysis['confidence_score']:.2f}):\n{response}"
+                )
+                return
+
+            # Log the successful fallback event
             self.claude_fallback.log_fallback_event(
                 user_input,
                 response,
@@ -531,7 +566,15 @@ print(factorial(5))
 
             # Show uncertainty warning if fallback was skipped
             if should_fallback and not self.claude_fallback.is_enabled():
-                print(f"\n{Colors.DIM}💡 Tip: Genesis showed uncertainty. Enable Claude assist with #assist{Colors.RESET}")
+                print(f"\n{Colors.YELLOW}⚠ Genesis is uncertain about this response{Colors.RESET}")
+                print(f"{Colors.DIM}Confidence score: {uncertainty_analysis['confidence_score']:.2f} (< 0.60 threshold){Colors.RESET}")
+                print(f"\n{Colors.CYAN}Genesis cannot complete this task reliably without Claude assistance.{Colors.RESET}\n")
+                print(f"{Colors.DIM}Options:{Colors.RESET}")
+                print(f"  1. Enable Claude assist: {Colors.GREEN}#assist{Colors.RESET}")
+                print(f"  2. Try a simpler version of your request")
+                print(f"  3. Break the task into smaller steps")
+                print(f"  4. Use direct commands when possible (ls, git, find)\n")
+                print(f"{Colors.DIM}The response above should be used with caution.{Colors.RESET}")
 
         # Process tool calls
         tool_results = self.process_tool_calls(final_response)
