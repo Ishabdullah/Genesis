@@ -46,17 +46,8 @@ class Genesis:
         self.model_path = "./models/CodeLlama-7B-Instruct.Q4_K_M.gguf"
         self.running = True
 
-        # System prompt template
-        self.system_prompt = """You are Genesis, a helpful AI assistant running locally on a Samsung S24 Ultra.
-You can execute Python code, read and write files, and help with programming tasks.
-
-When you need to perform actions:
-- To execute Python code, wrap it in triple backticks with 'python' language marker
-- To read a file, mention "READ: filepath"
-- To write a file, mention "WRITE: filepath" followed by content
-- To list a directory, mention "LIST: dirpath"
-
-Keep responses concise and focused. Always provide working code when requested."""
+        # System prompt template optimized for CodeLlama-Instruct
+        self.system_prompt = """You are a helpful coding assistant. Write clean, working code. Keep responses very brief."""
 
     def print_header(self):
         """Display Genesis header"""
@@ -170,33 +161,33 @@ Example: "Write a script to calculate fibonacci numbers"
             LLM response
         """
         try:
-            # Build context from memory
-            context = self.memory.get_context_string()
+            # Use CodeLlama-Instruct format: [INST] {prompt} [/INST]
+            # Keep it minimal for speed
+            full_prompt = f"[INST] {user_prompt} [/INST]"
 
-            # Construct full prompt
-            full_prompt = f"{self.system_prompt}\n\n"
-            if context:
-                full_prompt += f"Previous conversation:\n{context}\n\n"
-            full_prompt += f"User: {user_prompt}\nAssistant:"
-
-            # Call llama.cpp
+            # Call llama.cpp with VERY optimized parameters for speed
             cmd = [
                 self.llama_path,
                 "-m", self.model_path,
                 "-p", full_prompt,
-                "-n", "512",  # Max tokens
-                "-t", "4",    # Threads
-                "--temp", "0.7",
+                "-n", "150",  # Very short responses
+                "-t", "8",    # All cores
+                "--temp", "0.3",  # Lower temperature for faster, focused responses
                 "--top-p", "0.9",
-                "-c", "2048",  # Context size
-                "--no-display-prompt"
+                "--top-k", "40",
+                "-c", "512",  # Minimal context
+                "--no-display-prompt",
+                "-b", "512",  # Batch size
+                "--mirostat", "2",  # Mirostat for quality with fewer tokens
+                "--mirostat-lr", "0.1",
+                "--mirostat-ent", "5.0"
             ]
 
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=60
+                timeout=90  # 90 second timeout
             )
 
             response = result.stdout.strip()
