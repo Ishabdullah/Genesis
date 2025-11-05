@@ -17,6 +17,7 @@ from tools import GenesisTools
 from genesis_bridge import GenesisBridge, execute_remote_code
 from uncertainty_detector import UncertaintyDetector
 from claude_fallback import ClaudeFallback
+from performance_monitor import PerformanceMonitor
 
 # ANSI color codes for terminal output
 class Colors:
@@ -42,6 +43,7 @@ class Genesis:
         self.bridge_running = False
         self.uncertainty = UncertaintyDetector()
         self.claude_fallback = ClaudeFallback()
+        self.performance = PerformanceMonitor()
         self.llama_path = "./llama.cpp/llama-cli"
         self.model_path = "./models/CodeLlama-7B-Instruct.Q4_K_M.gguf"
         self.running = True
@@ -67,7 +69,7 @@ Keep responses brief and action-focused."""
         print("Powered by CodeLlama-7B running on Samsung S24 Ultra")
         print(f"{assist_color}Claude Assist: {assist_status}{Colors.RESET}{Colors.CYAN}")
         print(f"{'=' * 60}{Colors.RESET}\n")
-        print(f"{Colors.DIM}Commands: #exit | #reset | #help | #assist | #bridge{Colors.RESET}\n")
+        print(f"{Colors.DIM}Commands: #exit | #help | #assist | #performance | #correct | #incorrect{Colors.RESET}\n")
 
     def print_help(self):
         """Display help information"""
@@ -82,6 +84,12 @@ Keep responses brief and action-focused."""
 {Colors.GREEN}#bridge{Colors.RESET}     - Start/stop Claude Code bridge server
 {Colors.GREEN}#assist{Colors.RESET}     - Toggle Claude fallback assist (on/off)
 {Colors.GREEN}#assist-stats{Colors.RESET} - Show Claude assist statistics
+
+{Colors.BOLD}Performance Monitoring:{Colors.RESET}
+{Colors.GREEN}#performance{Colors.RESET}   - Show comprehensive performance metrics
+{Colors.GREEN}#correct{Colors.RESET}       - Mark last response as correct
+{Colors.GREEN}#incorrect{Colors.RESET}     - Mark last response as incorrect
+{Colors.GREEN}#reset_metrics{Colors.RESET} - Reset all performance metrics
 
 {Colors.BOLD}File Operations:{Colors.RESET}
 You can ask Genesis to read, write, list, or manipulate files.
@@ -474,18 +482,59 @@ print(factorial(5))
             self.show_assist_stats()
             return
 
+        # Performance monitoring commands
+        if user_input.lower() == "#performance":
+            print(self.performance.get_performance_summary())
+            return
+
+        if user_input.lower() == "#correct":
+            feedback = self.performance.record_feedback(is_correct=True)
+            print(f"\n{Colors.GREEN}✓ Last response marked as correct{Colors.RESET}")
+            print(f"{Colors.DIM}Thank you for the feedback!{Colors.RESET}\n")
+            return
+
+        if user_input.lower() == "#incorrect":
+            feedback = self.performance.record_feedback(is_correct=False)
+            print(f"\n{Colors.RED}✗ Last response marked as incorrect{Colors.RESET}")
+            print(f"{Colors.DIM}Thank you for the feedback! I'll learn from this.{Colors.RESET}\n")
+            return
+
+        if user_input.lower() == "#reset_metrics":
+            self.performance.reset_metrics()
+            print(f"\n{Colors.CYAN}✓ All performance metrics reset{Colors.RESET}\n")
+            return
+
+        # Start performance tracking
+        query_id = self.performance.start_query(user_input)
+
         # Check for direct commands that don't need LLM
         handled, result = self.handle_direct_command(user_input)
         if handled:
             print(f"\n{Colors.BOLD}Genesis:{Colors.RESET}")
             print(result)
             self.memory.add_interaction(user_input, result)
+
+            # Record direct command performance (instant)
+            self.performance.end_query(
+                query_id=query_id,
+                user_input=user_input,
+                response=result,
+                was_direct_command=True,
+                had_fallback=False,
+                confidence_score=1.0,
+                error=None
+            )
             return
 
         # Process through LLM
         print(f"\n{Colors.DIM}[Thinking...]{Colors.RESET}\n")
 
-        response = self.call_llm(user_input)
+        try:
+            response = self.call_llm(user_input)
+        except Exception as e:
+            # Record error
+            self.performance.record_error("llm_error", str(e), user_input)
+            raise
 
         # Check for uncertainty and trigger fallback if needed
         should_fallback, uncertainty_analysis = self.uncertainty.should_trigger_fallback(response)
@@ -495,6 +544,9 @@ print(factorial(5))
             print(f"\n{Colors.YELLOW}⚡ Genesis is uncertain (confidence: {uncertainty_analysis['confidence_score']:.2f})")
             print(f"   Requesting Claude assistance...{Colors.RESET}\n")
 
+            # Record fallback attempt
+            claude_reachable = False
+
             # Request Claude's help
             claude_response = self.claude_fallback.request_claude_assist(
                 user_input,
@@ -503,6 +555,15 @@ print(factorial(5))
             )
 
             # Check if Claude was reachable
+            claude_reachable = (claude_response is not None)
+
+            # Record fallback in performance monitor
+            self.performance.record_fallback(
+                user_input=user_input,
+                local_confidence=uncertainty_analysis['confidence_score'],
+                success=claude_reachable
+            )
+
             if claude_response is None:
                 print(f"\n{Colors.RED}⚠ Unable to reach Claude Code for assistance{Colors.RESET}")
                 print(f"{Colors.YELLOW}Genesis cannot complete this task reliably.{Colors.RESET}\n")
@@ -594,6 +655,17 @@ print(factorial(5))
             full_response += "\n" + code_results
 
         self.memory.add_interaction(user_input, full_response)
+
+        # Record query performance
+        self.performance.end_query(
+            query_id=query_id,
+            user_input=user_input,
+            response=full_response,
+            was_direct_command=False,
+            had_fallback=(claude_response is not None),
+            confidence_score=uncertainty_analysis.get('confidence_score'),
+            error=None
+        )
 
     def get_multiline_input(self) -> str:
         """

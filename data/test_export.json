@@ -1,0 +1,16 @@
+{
+  "queries": [],
+  "fallbacks": [],
+  "errors": [],
+  "feedback": {
+    "correct": 0,
+    "incorrect": 0
+  },
+  "statistics": {
+    "total_queries": 0,
+    "total_fallbacks": 0,
+    "total_errors": 0,
+    "avg_response_time_ms": 0.0
+  },
+  "session_start": "2025-11-05T13:24:39.638647"
+}
