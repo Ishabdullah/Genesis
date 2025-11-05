@@ -161,33 +161,42 @@ Example: "Write a script to calculate fibonacci numbers"
             LLM response
         """
         try:
-            # Use CodeLlama-Instruct format: [INST] {prompt} [/INST]
-            # Keep it minimal for speed
-            full_prompt = f"[INST] {user_prompt} [/INST]"
+            # Build context from recent conversation history
+            context = self.memory.get_context_string()
 
-            # Call llama.cpp with VERY optimized parameters for speed
+            # Use CodeLlama-Instruct format with context
+            if context:
+                # Include last 2 exchanges for continuity
+                recent = context.split('\n')[-8:]  # Last 2 Q&A pairs (4 lines each)
+                context_str = '\n'.join(recent)
+                full_prompt = f"[INST] Previous context:\n{context_str}\n\nNow answer: {user_prompt} [/INST]"
+            else:
+                full_prompt = f"[INST] {user_prompt} [/INST]"
+
+            # Call llama.cpp with balanced parameters
             cmd = [
                 self.llama_path,
                 "-m", self.model_path,
                 "-p", full_prompt,
-                "-n", "150",  # Very short responses
+                "-n", "250",  # Increased to avoid mid-sentence cuts
                 "-t", "8",    # All cores
-                "--temp", "0.3",  # Lower temperature for faster, focused responses
+                "--temp", "0.5",  # Slightly higher for more natural text
                 "--top-p", "0.9",
                 "--top-k", "40",
-                "-c", "512",  # Minimal context
+                "-c", "1024",  # Increased context window
                 "--no-display-prompt",
                 "-b", "512",  # Batch size
-                "--mirostat", "2",  # Mirostat for quality with fewer tokens
+                "--mirostat", "2",  # Mirostat for quality
                 "--mirostat-lr", "0.1",
-                "--mirostat-ent", "5.0"
+                "--mirostat-ent", "5.0",
+                "--repeat-penalty", "1.1"  # Prevent repetition
             ]
 
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=90  # 90 second timeout
+                timeout=120  # Increased timeout for context processing
             )
 
             response = result.stdout.strip()
