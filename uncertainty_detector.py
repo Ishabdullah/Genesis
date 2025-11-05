@@ -36,7 +36,31 @@ class UncertaintyDetector:
             r'\bapologies.*cannot\b',
             r'\bsorry.*unable\b',
             r'\bi apologize.*cannot\b',
+            r'\bthis is beyond my\b',
+            r'\btoo complex for me\b',
+            r'\bstruggling to\b',
+            r'\bdifficult to\b',
+            r'\bneed help with\b',
+            r'\bcannot complete\b',
+            r'\bunable to handle\b',
         ]
+
+        # Error patterns that indicate Genesis needs Claude
+        self.error_patterns = [
+            r'⚠',  # Any warning/error symbol
+            r'Error:',
+            r'Failed:',
+            r'timeout',
+            r'not found',
+            r'cannot access',
+            r'permission denied',
+        ]
+
+        # Compile patterns for efficiency
+        self.error_regex = re.compile(
+            '|'.join(self.error_patterns),
+            re.IGNORECASE
+        )
 
         # Compile patterns for efficiency
         self.uncertain_regex = re.compile(
@@ -168,6 +192,41 @@ class UncertaintyDetector:
         ]
 
         for pattern in error_patterns:
+            if re.search(pattern, text, re.IGNORECASE):
+                return True
+
+        return False
+
+    def _check_error_indicators(self, text: str) -> bool:
+        """
+        Check if response contains error indicators showing Genesis struggled
+
+        Args:
+            text: Text to check
+
+        Returns:
+            True if error indicators found
+        """
+        # Check for compiled error patterns
+        if self.error_regex.search(text):
+            return True
+
+        # Check for specific error patterns
+        error_indicators = [
+            r'LLM timeout',
+            r'LLM error',
+            r'execution failed',
+            r'⚠',  # Warning symbol
+            r'✗',  # X mark
+            r'SyntaxError',
+            r'NameError',
+            r'TypeError',
+            r'ValueError',
+            r'Exception',
+            r'Traceback',
+        ]
+
+        for pattern in error_indicators:
             if re.search(pattern, text, re.IGNORECASE):
                 return True
 

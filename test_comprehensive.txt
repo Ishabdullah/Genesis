@@ -1,0 +1,4 @@
+ls
+pwd
+cat GENESIS_UPDATE.md
+#exit

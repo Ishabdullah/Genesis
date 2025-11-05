@@ -1,0 +1,4 @@
+git status
+find *.md
+grep Genesis README.md
+#exit

@@ -47,7 +47,15 @@ class Genesis:
         self.running = True
 
         # System prompt template optimized for CodeLlama-Instruct
-        self.system_prompt = """You are a helpful coding assistant. Write clean, working code. Keep responses very brief."""
+        self.system_prompt = """You are an action-oriented AI assistant. When asked to do something, DO IT directly rather than explaining how.
+
+For file/directory operations, use these commands:
+- LIST: /path/to/dir - list directory contents
+- READ: /path/to/file - read file
+- WRITE: /path/to/file - write file (followed by content in code block)
+
+For shell commands (ls, pwd, cat, etc.), execute them directly.
+Keep responses brief and action-focused."""
 
     def print_header(self):
         """Display Genesis header"""
@@ -164,14 +172,37 @@ Example: "Write a script to calculate fibonacci numbers"
             # Build context from recent conversation history
             context = self.memory.get_context_string()
 
+            # Add instruction about using tools
+            tool_instructions = """You have access to these commands:
+- LIST: /path - to list directory contents
+- READ: /path/file - to read files
+- Write Python code in ```python blocks to execute
+
+Be action-oriented. If user asks you to list, read, or do something - use these commands directly.
+
+Examples:
+User: "list files in home"
+Assistant: LIST: ~
+
+User: "read config.json"
+Assistant: READ: config.json
+
+User: "calculate 5 factorial"
+Assistant: ```python
+def factorial(n):
+    return 1 if n <= 1 else n * factorial(n-1)
+print(factorial(5))
+```
+"""
+
             # Use CodeLlama-Instruct format with context
             if context:
                 # Include last 2 exchanges for continuity
                 recent = context.split('\n')[-8:]  # Last 2 Q&A pairs (4 lines each)
                 context_str = '\n'.join(recent)
-                full_prompt = f"[INST] Previous context:\n{context_str}\n\nNow answer: {user_prompt} [/INST]"
+                full_prompt = f"[INST] {tool_instructions}\n\nPrevious context:\n{context_str}\n\nNow answer: {user_prompt} [/INST]"
             else:
-                full_prompt = f"[INST] {user_prompt} [/INST]"
+                full_prompt = f"[INST] {tool_instructions}\n\n{user_prompt} [/INST]"
 
             # Call llama.cpp with balanced parameters
             cmd = [
@@ -213,6 +244,126 @@ Example: "Write a script to calculate fibonacci numbers"
             return f"⚠ LLM binary not found at {self.llama_path}"
         except Exception as e:
             return f"⚠ LLM error: {str(e)}"
+
+    def execute_shell_command(self, command: str) -> tuple[bool, str]:
+        """
+        Execute shell command safely
+
+        Args:
+            command: Shell command to execute
+
+        Returns:
+            (success, output) tuple
+        """
+        try:
+            result = subprocess.run(
+                command,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd=os.getcwd()
+            )
+
+            output = result.stdout
+            if result.stderr:
+                output += f"\n{result.stderr}"
+
+            return result.returncode == 0, output
+
+        except subprocess.TimeoutExpired:
+            return False, "⚠ Command timeout (30s limit)"
+        except Exception as e:
+            return False, f"⚠ Command error: {str(e)}"
+
+    def handle_direct_command(self, user_input: str) -> tuple[bool, str]:
+        """
+        Handle commands that can be executed directly without LLM
+
+        Args:
+            user_input: User's input
+
+        Returns:
+            (handled, result) - True if command was handled directly
+        """
+        input_lower = user_input.lower().strip()
+
+        # List directory commands
+        if input_lower in ["ls", "list files", "show files", "list directory"]:
+            return True, self.tools.list_directory(".")
+
+        if input_lower.startswith("ls "):
+            path = user_input[3:].strip()
+            return True, self.tools.list_directory(path)
+
+        # Home directory listing
+        if "files in" in input_lower and "home" in input_lower:
+            return True, self.tools.list_directory(os.path.expanduser("~"))
+
+        # Current directory
+        if input_lower in ["pwd", "current directory", "where am i"]:
+            return True, self.tools.get_current_directory()
+
+        # Read file commands
+        if input_lower.startswith("cat "):
+            filepath = user_input[4:].strip()
+            return True, self.tools.read_file(filepath)
+
+        # Change directory
+        if input_lower.startswith("cd "):
+            path = user_input[3:].strip()
+            return True, self.tools.change_directory(path)
+
+        # Git commands (all git operations)
+        if input_lower.startswith("git "):
+            success, output = self.execute_shell_command(user_input)
+            return True, output
+
+        # Find files
+        if input_lower.startswith("find "):
+            # Parse: find pattern [in path]
+            parts = user_input[5:].strip().split(" in ")
+            pattern = parts[0].strip()
+            path = parts[1].strip() if len(parts) > 1 else "."
+            return True, self.tools.find_files(pattern, path)
+
+        # Grep/search
+        if input_lower.startswith("grep "):
+            # Parse: grep pattern [in file/path]
+            parts = user_input[5:].strip().split(" in ")
+            pattern = parts[0].strip()
+            target = parts[1].strip() if len(parts) > 1 else None
+
+            if target and Path(target).is_file():
+                return True, self.tools.grep_files(pattern, filepath=target)
+            else:
+                return True, self.tools.grep_files(pattern, path=target or ".")
+
+        # Package installation
+        if input_lower.startswith(("pip install", "npm install", "apt install")):
+            success, output = self.execute_shell_command(user_input)
+            return True, output
+
+        # Environment variables
+        if input_lower.startswith("echo $"):
+            var = user_input[6:].strip()
+            value = os.environ.get(var, f"⚠ ${var} not set")
+            return True, value
+
+        # Process management
+        if input_lower in ["ps", "ps aux", "top"]:
+            success, output = self.execute_shell_command(user_input)
+            return True, output[:2000]  # Limit output
+
+        # Generic shell commands (be careful with this)
+        # Allow common safe commands
+        safe_commands = ["whoami", "hostname", "date", "uptime", "df", "du", "which", "whereis"]
+        if input_lower.split()[0] in safe_commands:
+            success, output = self.execute_shell_command(user_input)
+            return True, output
+
+        # Not a direct command
+        return False, ""
 
     def process_tool_calls(self, text: str) -> str:
         """
@@ -321,6 +472,14 @@ Example: "Write a script to calculate fibonacci numbers"
 
         if user_input.lower() == "#assist-stats":
             self.show_assist_stats()
+            return
+
+        # Check for direct commands that don't need LLM
+        handled, result = self.handle_direct_command(user_input)
+        if handled:
+            print(f"\n{Colors.BOLD}Genesis:{Colors.RESET}")
+            print(result)
+            self.memory.add_interaction(user_input, result)
             return
 
         # Process through LLM

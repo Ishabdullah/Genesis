@@ -1,0 +1,2 @@
+write a python script that prints hello world
+#exit

@@ -255,3 +255,138 @@ class GenesisTools:
 
         except Exception as e:
             return f"⚠ Error getting file info: {e}"
+
+    @staticmethod
+    def edit_file(filepath: str, old_text: str, new_text: str) -> str:
+        """
+        Find and replace text in file
+
+        Args:
+            filepath: Path to file
+            old_text: Text to find
+            new_text: Text to replace with
+
+        Returns:
+            Success or error message
+        """
+        try:
+            path = Path(filepath).expanduser()
+            if not path.exists():
+                return f"⚠ File not found: {filepath}"
+
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            if old_text not in content:
+                return f"⚠ Text not found in {filepath}"
+
+            # Count occurrences
+            count = content.count(old_text)
+            new_content = content.replace(old_text, new_text)
+
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+
+            return f"✓ Edited {filepath} ({count} occurrence{'s' if count > 1 else ''} replaced)"
+
+        except Exception as e:
+            return f"⚠ Error editing file: {e}"
+
+    @staticmethod
+    def find_files(pattern: str, path: str = ".") -> str:
+        """
+        Find files matching glob pattern
+
+        Args:
+            pattern: Glob pattern (e.g., "*.py", "test_*.txt")
+            path: Directory to search in
+
+        Returns:
+            List of matching files
+        """
+        try:
+            search_path = Path(path).expanduser()
+            if not search_path.exists():
+                return f"⚠ Path not found: {path}"
+
+            matches = list(search_path.rglob(pattern))
+
+            if not matches:
+                return f"⚠ No files found matching '{pattern}'"
+
+            result = f"🔍 Found {len(matches)} file{'s' if len(matches) > 1 else ''}:\n\n"
+
+            # Show first 100 matches
+            for match in matches[:100]:
+                size = match.stat().st_size if match.is_file() else 0
+                if match.is_dir():
+                    result += f"📁 {match}\n"
+                else:
+                    result += f"📄 {match} ({size} bytes)\n"
+
+            if len(matches) > 100:
+                result += f"\n... and {len(matches) - 100} more"
+
+            return result
+
+        except Exception as e:
+            return f"⚠ Error searching files: {e}"
+
+    @staticmethod
+    def grep_files(pattern: str, filepath: str = None, path: str = ".", file_types: list = None) -> str:
+        """
+        Search for pattern in files
+
+        Args:
+            pattern: Text or regex pattern to search
+            filepath: Specific file to search (if None, searches all)
+            path: Directory to search in
+            file_types: List of extensions to search (e.g., ['.py', '.txt'])
+
+        Returns:
+            Matching lines with file:line format
+        """
+        try:
+            import re
+
+            if file_types is None:
+                file_types = ['.py', '.txt', '.md', '.js', '.json', '.sh', '.yaml', '.yml']
+
+            matches = []
+            search_path = Path(path).expanduser()
+
+            if filepath:
+                # Search specific file
+                files = [Path(filepath).expanduser()]
+            else:
+                # Search all files with matching extensions
+                files = []
+                for ext in file_types:
+                    files.extend(search_path.rglob(f"*{ext}"))
+
+            for file in files:
+                try:
+                    if not file.is_file():
+                        continue
+
+                    with open(file, 'r', encoding='utf-8', errors='ignore') as f:
+                        for i, line in enumerate(f, 1):
+                            if re.search(pattern, line, re.IGNORECASE):
+                                matches.append(f"{file}:{i}: {line.strip()}")
+
+                except:
+                    continue
+
+            if not matches:
+                return f"⚠ Pattern '{pattern}' not found"
+
+            result = f"🔍 Found {len(matches)} match{'es' if len(matches) > 1 else ''}:\n\n"
+            result += "\n".join(matches[:100])
+
+            if len(matches) > 100:
+                result += f"\n\n... and {len(matches) - 100} more"
+
+            return result
+
+        except Exception as e:
+            return f"⚠ Error searching: {e}"
