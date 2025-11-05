@@ -7,22 +7,30 @@ A complete Claude-Code-like environment running entirely in Termux on Android.
 Genesis is a local AI assistant powered by CodeLlama-7B that runs on your Samsung S24 Ultra. It provides:
 
 - **Code execution**: Write and run Python code safely
-- **File operations**: Read, write, and manage files
+- **File operations**: Read, write, edit, search files
+- **Shell integration**: Execute git, pip, grep, find commands
 - **Conversation memory**: Maintains context across interactions
-- **Zero cloud dependency**: Everything runs locally
+- **Performance monitoring**: Self-evaluating metrics and feedback
+- **Claude fallback**: Intelligent escalation when uncertain
+- **Zero cloud dependency**: Everything runs locally (optional fallback)
 
 ## Architecture
 
 ```
 Genesis/
-├── genesis.py          # Main controller
-├── memory.py           # Conversation memory manager
-├── executor.py         # Safe code execution
-├── tools.py            # File system tools
-├── llama.cpp/          # LLM inference engine
-├── models/             # LLM model storage
-├── runtime/            # Temporary execution files
-└── memory.json         # Persistent conversation history
+├── genesis.py                # Main controller
+├── memory.py                 # Conversation memory manager
+├── executor.py               # Safe code execution
+├── tools.py                  # File system tools (read/write/edit/search)
+├── uncertainty_detector.py   # Confidence scoring
+├── claude_fallback.py        # Intelligent fallback orchestration
+├── performance_monitor.py    # Self-evaluation metrics
+├── genesis_bridge.py         # HTTP API bridge
+├── llama.cpp/                # LLM inference engine
+├── models/                   # LLM model storage
+├── data/                     # Performance metrics & training data
+├── logs/                     # Fallback and error logs
+└── memory.json               # Persistent conversation history
 ```
 
 ## Installation
@@ -62,11 +70,23 @@ Genesis/
 
 ### Basic Commands
 
+**System:**
 - `#exit` - Quit Genesis
 - `#reset` - Clear conversation memory
 - `#help` - Show help information
 - `#stats` - Display memory statistics
 - `#pwd` - Show current directory
+
+**Claude Assist:**
+- `#assist` - Toggle Claude fallback on/off
+- `#assist-stats` - Show Claude assist statistics
+- `#bridge` - Start HTTP bridge for Claude Code
+
+**Performance Monitoring:**
+- `#performance` - Show comprehensive metrics
+- `#correct` - Mark last response as correct
+- `#incorrect` - Mark last response as incorrect
+- `#reset_metrics` - Reset all performance data
 
 ### File Operations
 
@@ -138,6 +158,47 @@ Code execution is sandboxed:
 - Executes in isolated `runtime/` directory
 - Captures stdout and stderr
 - Handles errors gracefully without crashing
+
+## Performance Monitoring
+
+Genesis includes **autonomous performance tracking**:
+
+### Metrics Tracked
+- **Response time**: Latency from request to response (ms)
+- **Claude fallbacks**: Frequency and success rate
+- **User feedback**: Correctness percentage (#correct / #incorrect)
+- **Errors**: System lag, timeouts, exceptions
+- **Performance rating**: Overall score (0-100)
+
+### View Metrics
+```bash
+Genesis> #performance
+```
+
+Shows:
+- Total queries (direct vs LLM)
+- Average response speed
+- Correctness percentage
+- Fallback statistics
+- Recent errors
+- Performance rating
+
+### Provide Feedback
+```bash
+Genesis> #correct      # Mark response as correct
+Genesis> #incorrect    # Mark response as incorrect
+```
+
+### Data Storage
+Metrics stored in: `~/Genesis/data/genesis_metrics.json`
+
+**Features:**
+- Async non-blocking storage
+- Thread-safe concurrent access
+- Lightweight JSON format (< 100 KB/day)
+- Reset capability (#reset_metrics)
+
+See [PERFORMANCE_MONITORING.md](PERFORMANCE_MONITORING.md) for complete guide.
 
 ## Performance
 
