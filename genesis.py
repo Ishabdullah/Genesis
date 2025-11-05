@@ -19,6 +19,8 @@ from uncertainty_detector import UncertaintyDetector
 from claude_fallback import ClaudeFallback
 from performance_monitor import PerformanceMonitor
 from learning_memory import LearningMemory
+from reasoning import ReasoningEngine
+from thinking_trace import ThinkingTrace
 
 # ANSI color codes for terminal output
 class Colors:
@@ -46,6 +48,8 @@ class Genesis:
         self.claude_fallback = ClaudeFallback()
         self.performance = PerformanceMonitor()
         self.learning = LearningMemory()
+        self.reasoning = ReasoningEngine()
+        self.thinking_trace = ThinkingTrace(show_live=True, delay=0.3)
         self.llama_path = "./llama.cpp/llama-cli"
         self.model_path = "./models/CodeLlama-7B-Instruct.Q4_K_M.gguf"
         self.running = True
@@ -698,8 +702,18 @@ Rules:
             )
             return
 
-        # Process through LLM
-        print(f"\n{Colors.DIM}[Thinking...]{Colors.RESET}\n")
+        # Process through LLM with reasoning
+        # Generate reasoning trace before LLM call
+        problem_type = self.reasoning.detect_problem_type(user_input)
+        reasoning_steps = self.reasoning.generate_reasoning_trace(user_input, problem_type)
+
+        # Display thinking trace
+        self.thinking_trace.display_steps(reasoning_steps, show_details=True)
+
+        # Generate pseudocode for programming problems
+        if problem_type == "programming":
+            pseudocode = self.reasoning.generate_pseudocode(user_input)
+            self.thinking_trace.display_pseudocode(pseudocode)
 
         try:
             response = self.call_llm(user_input)
@@ -787,27 +801,33 @@ Rules:
                     uncertainty_analysis
                 )
 
-        # Display response
+        # Validate reasoning before displaying final answer
         if claude_response:
-            print(f"{Colors.BOLD}{Colors.CYAN}Genesis (Claude-assisted):{Colors.RESET}")
-            print(claude_response)
             final_response = claude_response
         else:
-            print(f"{Colors.BOLD}Genesis:{Colors.RESET}")
-            print(response)
             final_response = response
 
-            # Show uncertainty warning if fallback was skipped
-            if should_fallback and not self.claude_fallback.is_enabled():
-                print(f"\n{Colors.YELLOW}⚠ Genesis is uncertain about this response{Colors.RESET}")
-                print(f"{Colors.DIM}Confidence score: {uncertainty_analysis['confidence_score']:.2f} (< 0.60 threshold){Colors.RESET}")
-                print(f"\n{Colors.CYAN}Genesis cannot complete this task reliably without Claude assistance.{Colors.RESET}\n")
-                print(f"{Colors.DIM}Options:{Colors.RESET}")
-                print(f"  1. Enable Claude assist: {Colors.GREEN}#assist{Colors.RESET}")
-                print(f"  2. Try a simpler version of your request")
-                print(f"  3. Break the task into smaller steps")
-                print(f"  4. Use direct commands when possible (ls, git, find)\n")
-                print(f"{Colors.DIM}The response above should be used with caution.{Colors.RESET}")
+        is_valid, warnings = self.reasoning.validate_reasoning(reasoning_steps, final_response)
+
+        # Display validation warnings if any
+        if warnings:
+            self.thinking_trace.display_validation_warnings(warnings)
+
+        # Display final answer with proper formatting
+        confidence_score = uncertainty_analysis.get('confidence_score', 0.8)
+        self.thinking_trace.display_final_answer(final_response, confidence_score)
+
+        # Show uncertainty warning if fallback was skipped
+        if should_fallback and not self.claude_fallback.is_enabled():
+            print(f"\n{Colors.YELLOW}⚠ Genesis is uncertain about this response{Colors.RESET}")
+            print(f"{Colors.DIM}Confidence score: {confidence_score:.2f} (< 0.60 threshold){Colors.RESET}")
+            print(f"\n{Colors.CYAN}Genesis cannot complete this task reliably without Claude assistance.{Colors.RESET}\n")
+            print(f"{Colors.DIM}Options:{Colors.RESET}")
+            print(f"  1. Enable Claude assist: {Colors.GREEN}#assist{Colors.RESET}")
+            print(f"  2. Try a simpler version of your request")
+            print(f"  3. Break the task into smaller steps")
+            print(f"  4. Use direct commands when possible (ls, git, find)\n")
+            print(f"{Colors.DIM}The response above should be used with caution.{Colors.RESET}")
 
         # Process tool calls
         tool_results = self.process_tool_calls(final_response)
@@ -828,14 +848,22 @@ Rules:
 
         self.memory.add_interaction(user_input, full_response)
 
-        # Store in learning memory with metadata
+        # Store in learning memory with metadata including reasoning trace
+        reasoning_trace_summary = [
+            {"step": s.step_num, "description": s.description}
+            for s in reasoning_steps
+        ]
+
         self.learning.add_conversation(
             user_input=user_input,
             assistant_response=full_response,
             metadata={
                 "had_fallback": claude_response is not None,
                 "confidence_score": uncertainty_analysis.get('confidence_score'),
-                "was_direct_command": False
+                "was_direct_command": False,
+                "problem_type": problem_type,
+                "reasoning_steps": reasoning_trace_summary,
+                "reasoning_valid": is_valid
             }
         )
 
