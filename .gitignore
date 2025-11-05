@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Genesis runtime
+runtime/
+*.log
+memory.json
+bridge_log.txt
+
+# LLM models (too large for git)
+models/
+llama.cpp/
+
+# Logs and data
+logs/
+data/retrain_set.json
+
+# System files
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Temporary files
+/tmp/
+*.tmp

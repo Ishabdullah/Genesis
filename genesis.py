@@ -1,0 +1,465 @@
+#!/usr/bin/env python3
+"""
+Genesis - Local AI Workstation
+A Claude-Code-like environment running entirely in Termux
+"""
+
+import os
+import sys
+import subprocess
+import re
+from pathlib import Path
+
+# Import Genesis modules
+from memory import MemoryManager
+from executor import CodeExecutor
+from tools import GenesisTools
+from genesis_bridge import GenesisBridge, execute_remote_code
+from uncertainty_detector import UncertaintyDetector
+from claude_fallback import ClaudeFallback
+
+# ANSI color codes for terminal output
+class Colors:
+    HEADER = '\033[95m'
+    BLUE = '\033[94m'
+    CYAN = '\033[96m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    RESET = '\033[0m'
+    BOLD = '\033[1m'
+    DIM = '\033[2m'
+
+class Genesis:
+    """Main Genesis AI Workstation controller"""
+
+    def __init__(self):
+        """Initialize Genesis system"""
+        self.memory = MemoryManager()
+        self.executor = CodeExecutor()
+        self.tools = GenesisTools()
+        self.bridge = GenesisBridge()
+        self.bridge_running = False
+        self.uncertainty = UncertaintyDetector()
+        self.claude_fallback = ClaudeFallback()
+        self.llama_path = "./llama.cpp/llama-cli"
+        self.model_path = "./models/CodeLlama-7B-Instruct.Q4_K_M.gguf"
+        self.running = True
+
+        # System prompt template
+        self.system_prompt = """You are Genesis, a helpful AI assistant running locally on a Samsung S24 Ultra.
+You can execute Python code, read and write files, and help with programming tasks.
+
+When you need to perform actions:
+- To execute Python code, wrap it in triple backticks with 'python' language marker
+- To read a file, mention "READ: filepath"
+- To write a file, mention "WRITE: filepath" followed by content
+- To list a directory, mention "LIST: dirpath"
+
+Keep responses concise and focused. Always provide working code when requested."""
+
+    def print_header(self):
+        """Display Genesis header"""
+        assist_status = "ON" if self.claude_fallback.is_enabled() else "OFF"
+        assist_color = Colors.GREEN if self.claude_fallback.is_enabled() else Colors.DIM
+
+        print(f"\n{Colors.BOLD}{Colors.CYAN}{'=' * 60}")
+        print("🧬 Genesis — Local AI Workstation")
+        print("Powered by CodeLlama-7B running on Samsung S24 Ultra")
+        print(f"{assist_color}Claude Assist: {assist_status}{Colors.RESET}{Colors.CYAN}")
+        print(f"{'=' * 60}{Colors.RESET}\n")
+        print(f"{Colors.DIM}Commands: #exit | #reset | #help | #assist | #bridge{Colors.RESET}\n")
+
+    def print_help(self):
+        """Display help information"""
+        help_text = f"""
+{Colors.BOLD}Genesis Commands:{Colors.RESET}
+
+{Colors.GREEN}#exit{Colors.RESET}       - Exit Genesis
+{Colors.GREEN}#reset{Colors.RESET}      - Clear conversation memory
+{Colors.GREEN}#help{Colors.RESET}       - Show this help message
+{Colors.GREEN}#stats{Colors.RESET}      - Show memory statistics
+{Colors.GREEN}#pwd{Colors.RESET}        - Show current directory
+{Colors.GREEN}#bridge{Colors.RESET}     - Start/stop Claude Code bridge server
+{Colors.GREEN}#assist{Colors.RESET}     - Toggle Claude fallback assist (on/off)
+{Colors.GREEN}#assist-stats{Colors.RESET} - Show Claude assist statistics
+
+{Colors.BOLD}File Operations:{Colors.RESET}
+You can ask Genesis to read, write, list, or manipulate files.
+Examples:
+  - "Read the file config.json"
+  - "Write a Python script that prints hello world to test.py"
+  - "List files in the current directory"
+
+{Colors.BOLD}Code Execution:{Colors.RESET}
+Ask Genesis to write Python code and it will execute automatically.
+Example: "Write a script to calculate fibonacci numbers"
+"""
+        print(help_text)
+
+    def toggle_bridge(self):
+        """Start or stop the Genesis-Claude Code bridge"""
+        if not self.bridge_running:
+            print(f"\n{Colors.CYAN}Starting Genesis Bridge...{Colors.RESET}\n")
+            self.bridge.start()
+            self.bridge_running = True
+            print(f"\n{Colors.BOLD}Claude Code can now connect using:{Colors.RESET}")
+            print(f'{Colors.DIM}curl -X POST -H "Content-Type: application/json" \\')
+            print(f'     -H "X-Genesis-Key: localonly" \\')
+            print(f'     -d \'{{"code":"print(\\"test\\")"}} \' \\')
+            print(f'     http://127.0.0.1:5050/run{Colors.RESET}\n')
+        else:
+            print(f"\n{Colors.YELLOW}Bridge is already running on 127.0.0.1:5050{Colors.RESET}\n")
+            print("Use #exit to stop Genesis and the bridge\n")
+
+    def toggle_claude_assist(self):
+        """Toggle Claude fallback assist on/off"""
+        if self.claude_fallback.is_enabled():
+            self.claude_fallback.disable()
+            print(f"\n{Colors.YELLOW}Claude assist disabled{Colors.RESET}")
+            print("Genesis will run entirely locally without fallback\n")
+        else:
+            self.claude_fallback.enable()
+            print(f"\n{Colors.GREEN}Claude assist enabled{Colors.RESET}")
+            print("Genesis will request Claude's help when uncertain")
+            print("Logs: ~/Genesis/logs/fallback_history.log\n")
+
+    def show_assist_stats(self):
+        """Show Claude assist statistics"""
+        stats = self.claude_fallback.get_fallback_stats()
+
+        print(f"\n{Colors.BOLD}Claude Assist Statistics:{Colors.RESET}\n")
+        print(f"Status: {'ENABLED' if stats['enabled'] else 'DISABLED'}")
+        print(f"Total fallbacks: {stats['total_fallbacks']}")
+        print(f"Successful: {stats['successful_fallbacks']}")
+        print(f"Failed: {stats['failed_fallbacks']}")
+        print(f"Learning examples: {stats['retrain_examples']}")
+
+        if stats['total_fallbacks'] > 0:
+            success_rate = (stats['successful_fallbacks'] / stats['total_fallbacks']) * 100
+            print(f"Success rate: {success_rate:.1f}%")
+
+        print(f"\nLogs: ~/Genesis/logs/fallback_history.log")
+        print(f"Dataset: ~/Genesis/data/retrain_set.json\n")
+
+    def check_llama_cpp(self) -> bool:
+        """Check if llama.cpp is available"""
+        # Try multiple possible binary names
+        possible_paths = [
+            "./llama.cpp/llama-cli",
+            "./llama.cpp/main",
+            "./llama.cpp/build/bin/llama-cli"
+        ]
+
+        for path in possible_paths:
+            if os.path.exists(path):
+                self.llama_path = path
+                return True
+
+        return False
+
+    def call_llm(self, user_prompt: str) -> str:
+        """
+        Call the local LLM with user prompt and conversation history
+
+        Args:
+            user_prompt: User's input
+
+        Returns:
+            LLM response
+        """
+        try:
+            # Build context from memory
+            context = self.memory.get_context_string()
+
+            # Construct full prompt
+            full_prompt = f"{self.system_prompt}\n\n"
+            if context:
+                full_prompt += f"Previous conversation:\n{context}\n\n"
+            full_prompt += f"User: {user_prompt}\nAssistant:"
+
+            # Call llama.cpp
+            cmd = [
+                self.llama_path,
+                "-m", self.model_path,
+                "-p", full_prompt,
+                "-n", "512",  # Max tokens
+                "-t", "4",    # Threads
+                "--temp", "0.7",
+                "--top-p", "0.9",
+                "-c", "2048",  # Context size
+                "--no-display-prompt"
+            ]
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+
+            response = result.stdout.strip()
+
+            # Clean up response (remove prompt echo if present)
+            if "Assistant:" in response:
+                response = response.split("Assistant:")[-1].strip()
+
+            return response if response else "⚠ No response from model"
+
+        except subprocess.TimeoutExpired:
+            return "⚠ LLM timeout - try a shorter prompt"
+        except FileNotFoundError:
+            return f"⚠ LLM binary not found at {self.llama_path}"
+        except Exception as e:
+            return f"⚠ LLM error: {str(e)}"
+
+    def process_tool_calls(self, text: str) -> str:
+        """
+        Process tool calls mentioned in LLM response
+
+        Args:
+            text: LLM response text
+
+        Returns:
+            Text with tool results appended
+        """
+        results = []
+
+        # Check for READ commands
+        read_pattern = r'READ:\s*([^\n]+)'
+        for match in re.finditer(read_pattern, text):
+            filepath = match.group(1).strip()
+            result = self.tools.read_file(filepath)
+            results.append(f"\n{Colors.CYAN}[File Read]{Colors.RESET}\n{result}")
+
+        # Check for WRITE commands
+        write_pattern = r'WRITE:\s*([^\n]+)\n```(?:python)?\n(.*?)```'
+        for match in re.finditer(write_pattern, text, re.DOTALL):
+            filepath = match.group(1).strip()
+            content = match.group(2).strip()
+            result = self.tools.write_file(filepath, content)
+            results.append(f"\n{Colors.GREEN}[File Write]{Colors.RESET}\n{result}")
+
+        # Check for LIST commands
+        list_pattern = r'LIST:\s*([^\n]+)'
+        for match in re.finditer(list_pattern, text):
+            dirpath = match.group(1).strip()
+            result = self.tools.list_directory(dirpath)
+            results.append(f"\n{Colors.BLUE}[Directory List]{Colors.RESET}\n{result}")
+
+        return "".join(results)
+
+    def process_code_execution(self, text: str) -> str:
+        """
+        Extract and execute Python code blocks
+
+        Args:
+            text: LLM response text
+
+        Returns:
+            Execution results
+        """
+        code_blocks = self.executor.extract_code_blocks(text)
+
+        if not code_blocks:
+            return ""
+
+        results = []
+        for i, code in enumerate(code_blocks, 1):
+            print(f"\n{Colors.YELLOW}[Executing Code Block {i}]{Colors.RESET}")
+            print(f"{Colors.DIM}{code[:200]}{'...' if len(code) > 200 else ''}{Colors.RESET}\n")
+
+            success, output = self.executor.execute_code(code)
+
+            if success:
+                results.append(f"{Colors.GREEN}✓ Execution successful:{Colors.RESET}\n{output}")
+            else:
+                results.append(f"{Colors.RED}✗ Execution failed:{Colors.RESET}\n{output}")
+
+        return "\n\n".join(results)
+
+    def process_input(self, user_input: str):
+        """
+        Process user input and generate response
+
+        Args:
+            user_input: User's input text
+        """
+        # Handle special commands
+        if user_input.lower() == "#exit":
+            print(f"\n{Colors.CYAN}Goodbye! 🧬{Colors.RESET}\n")
+            self.running = False
+            return
+
+        if user_input.lower() == "#reset":
+            self.memory.reset()
+            return
+
+        if user_input.lower() == "#help":
+            self.print_help()
+            return
+
+        if user_input.lower() == "#stats":
+            stats = self.memory.get_stats()
+            print(f"\n{Colors.BOLD}Memory Statistics:{Colors.RESET}")
+            print(f"Conversations: {stats['total_conversations']}")
+            print(f"Memory size: {stats['memory_size_kb']:.2f} KB\n")
+            return
+
+        if user_input.lower() == "#pwd":
+            print(self.tools.get_current_directory())
+            return
+
+        if user_input.lower() == "#bridge":
+            self.toggle_bridge()
+            return
+
+        if user_input.lower() == "#assist":
+            self.toggle_claude_assist()
+            return
+
+        if user_input.lower() == "#assist-stats":
+            self.show_assist_stats()
+            return
+
+        # Process through LLM
+        print(f"\n{Colors.DIM}[Thinking...]{Colors.RESET}\n")
+
+        response = self.call_llm(user_input)
+
+        # Check for uncertainty and trigger fallback if needed
+        should_fallback, uncertainty_analysis = self.uncertainty.should_trigger_fallback(response)
+
+        claude_response = None
+        if should_fallback and self.claude_fallback.is_enabled():
+            print(f"\n{Colors.YELLOW}⚡ Genesis is uncertain (confidence: {uncertainty_analysis['confidence_score']:.2f})")
+            print(f"   Requesting Claude assistance...{Colors.RESET}\n")
+
+            # Request Claude's help
+            claude_response = self.claude_fallback.request_claude_assist(
+                user_input,
+                response,
+                uncertainty_analysis
+            )
+
+            # Log the fallback event
+            self.claude_fallback.log_fallback_event(
+                user_input,
+                response,
+                claude_response,
+                uncertainty_analysis
+            )
+
+            # Add to retraining dataset if we got a Claude response
+            if claude_response:
+                self.claude_fallback.add_to_retrain_dataset(
+                    user_input,
+                    response,
+                    claude_response,
+                    uncertainty_analysis
+                )
+
+        # Display response
+        if claude_response:
+            print(f"{Colors.BOLD}{Colors.CYAN}Genesis (Claude-assisted):{Colors.RESET}")
+            print(claude_response)
+            final_response = claude_response
+        else:
+            print(f"{Colors.BOLD}Genesis:{Colors.RESET}")
+            print(response)
+            final_response = response
+
+            # Show uncertainty warning if fallback was skipped
+            if should_fallback and not self.claude_fallback.is_enabled():
+                print(f"\n{Colors.DIM}💡 Tip: Genesis showed uncertainty. Enable Claude assist with #assist{Colors.RESET}")
+
+        # Process tool calls
+        tool_results = self.process_tool_calls(final_response)
+        if tool_results:
+            print(tool_results)
+
+        # Execute code blocks
+        code_results = self.process_code_execution(final_response)
+        if code_results:
+            print(f"\n{code_results}")
+
+        # Save to memory
+        full_response = final_response
+        if tool_results:
+            full_response += "\n" + tool_results
+        if code_results:
+            full_response += "\n" + code_results
+
+        self.memory.add_interaction(user_input, full_response)
+
+    def get_multiline_input(self) -> str:
+        """
+        Get multiline input from user
+
+        Returns:
+            Complete user input
+        """
+        print(f"{Colors.BOLD}{Colors.GREEN}Genesis>{Colors.RESET} ", end='', flush=True)
+
+        lines = []
+        try:
+            first_line = input()
+            lines.append(first_line)
+
+            # Check if user wants multiline (ends with backslash)
+            while lines[-1].endswith('\\'):
+                lines[-1] = lines[-1][:-1]  # Remove backslash
+                print(f"{Colors.GREEN}      >{Colors.RESET} ", end='', flush=True)
+                lines.append(input())
+
+        except EOFError:
+            return "#exit"
+        except KeyboardInterrupt:
+            print()
+            return ""
+
+        return '\n'.join(lines).strip()
+
+    def run(self):
+        """Main Genesis loop"""
+        self.print_header()
+
+        # Check if llama.cpp is available
+        if not self.check_llama_cpp():
+            print(f"{Colors.RED}⚠ Error: llama.cpp not found{Colors.RESET}")
+            print("Please run setup_genesis.sh first\n")
+            return
+
+        # Check if model exists
+        if not os.path.exists(self.model_path):
+            print(f"{Colors.RED}⚠ Error: Model not found at {self.model_path}{Colors.RESET}")
+            print("Please ensure the model is properly linked\n")
+            return
+
+        print(f"{Colors.GREEN}✓ System ready{Colors.RESET}\n")
+
+        # Main interaction loop
+        while self.running:
+            try:
+                user_input = self.get_multiline_input()
+
+                if not user_input:
+                    continue
+
+                self.process_input(user_input)
+
+            except KeyboardInterrupt:
+                print(f"\n{Colors.YELLOW}Use #exit to quit{Colors.RESET}\n")
+            except Exception as e:
+                print(f"{Colors.RED}⚠ Error: {e}{Colors.RESET}\n")
+
+        # Cleanup
+        self.executor.clean_runtime()
+
+def main():
+    """Entry point"""
+    genesis = Genesis()
+    genesis.run()
+
+if __name__ == "__main__":
+    main()
