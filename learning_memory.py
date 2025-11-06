@@ -411,6 +411,16 @@ Commands: #memory | #prune_memory | #export_memory
         """
         return self.learning_log["entries"][-count:]
 
+    def _save_conversation_memory(self):
+        """Save conversation memory to file"""
+        with self._lock:
+            self._save_json(self.conversation_memory_file, self.conversation_memory)
+
+    def _save_learning_log(self):
+        """Save learning log to file"""
+        with self._lock:
+            self._save_json(self.learning_log_file, self.learning_log)
+
     def add_feedback_note(self, query: str, note: str, is_correct: bool):
         """
         Add feedback note to learning memory

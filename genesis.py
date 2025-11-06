@@ -611,9 +611,11 @@ Rules:
                 return True, f"✗ Failed to get location: {result.get('error')}"
 
         # Date/Time queries
-        time_triggers = ["what time is it", "what's the time", "current time", "tell me the time"]
-        date_triggers = ["what is the date", "what's the date", "today's date", "current date",
-                        "what day is it", "what day is today"]
+        time_triggers = ["what time is it", "what's the time", "whats the time", "current time",
+                        "tell me the time", "time"]
+        date_triggers = ["what is the date", "what's the date", "whats the date", "today's date",
+                        "todays date", "current date", "what day is it", "what day is today",
+                        "what is today", "whats today"]
 
         if any(trigger in input_lower for trigger in time_triggers):
             result = self.device_manager.get_date_time()

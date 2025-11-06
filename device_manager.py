@@ -56,7 +56,7 @@ class DeviceManager:
         except Exception:
             return False
 
-    def _run_termux_command(self, command: list, timeout: int = 30) -> Tuple[bool, str]:
+    def _run_termux_command(self, command: list, timeout: int = 10) -> Tuple[bool, str]:
         """
         Run a termux-api command
 
@@ -75,11 +75,22 @@ class DeviceManager:
                 command,
                 capture_output=True,
                 text=True,
-                timeout=timeout
+                timeout=timeout,
+                shell=False
             )
+            # Check for common errors
+            if result.stderr:
+                error_lower = result.stderr.lower()
+                if "permission" in error_lower:
+                    return False, "Permission denied. Grant permissions in Android Settings → Apps → Termux:API"
+                elif "not found" in error_lower:
+                    return False, "Termux:API app not installed. Install from F-Droid or GitHub"
+
             return result.returncode == 0, result.stdout
         except subprocess.TimeoutExpired:
-            return False, "Command timed out"
+            return False, f"Command timed out after {timeout}s. The device may be slow or the feature unavailable."
+        except FileNotFoundError:
+            return False, "Termux API command not found. Run: pkg install termux-api"
         except Exception as e:
             return False, f"Error: {str(e)}"
 
@@ -298,7 +309,7 @@ class DeviceManager:
             new_state = state
 
         command = ["termux-torch", "on" if new_state else "off"]
-        success, output = self._run_termux_command(command, timeout=5)
+        success, output = self._run_termux_command(command, timeout=3)
 
         if success:
             self.flashlight_on = new_state

@@ -5,6 +5,63 @@ All notable changes to Genesis will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.2] - 2025-11-06
+
+### 🐛 Critical Fixes: Device Commands, Pattern Matching, and Memory System
+
+**Fixed three critical issues preventing device features from working properly.**
+
+### Fixed
+
+#### 1. Termux API Timeout Issues
+- **Problem**: Flashlight and other commands timing out
+- **Solution**:
+  - Reduced default timeout from 30s to 10s
+  - Flashlight timeout reduced to 3s
+  - Added better error messages for permissions and missing Termux:API app
+  - Added stderr checking for common error conditions
+- **Impact**: Commands now respond faster with clearer error messages
+
+#### 2. Date/Time Pattern Matching
+- **Problem**: "What is todays date" (no apostrophe) not recognized
+- **Solution**: Added more pattern variations:
+  - "todays date" (typo variant)
+  - "whats the date" / "whats the time" (no apostrophe)
+  - "whats today" (short form)
+  - "time" (single word)
+- **Impact**: More flexible natural language understanding
+
+#### 3. LearningMemory Crash
+- **Problem**: `AttributeError: 'LearningMemory' object has no attribute '_save_conversation_memory'`
+- **Solution**: Added missing methods:
+  - `_save_conversation_memory()`
+  - `_save_learning_log()`
+- **Impact**: Feedback notes now save properly without crashes
+
+### Error Messages Improved
+```
+Before: "Command timed out"
+After:  "Command timed out after 3s. The device may be slow or the feature unavailable."
+
+Before: Generic error
+After:  "Permission denied. Grant permissions in Android Settings → Apps → Termux:API"
+        "Termux:API app not installed. Install from F-Droid or GitHub"
+```
+
+### Testing
+All three issues verified fixed:
+- ✅ Flashlight command works with better timeout
+- ✅ "What is todays date" now recognized instantly
+- ✅ Feedback notes save without errors
+
+### Files Modified
+- `device_manager.py` (better timeout + error handling)
+- `genesis.py` (expanded date/time patterns)
+- `learning_memory.py` (added missing save methods)
+- `CHANGELOG.md` (this changelog)
+
+---
+
 ## [2.2.1] - 2025-11-06
 
 ### 🔧 Fix: Direct Command Handlers for Device Features

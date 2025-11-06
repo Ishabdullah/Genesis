@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform: Termux](https://img.shields.io/badge/Platform-Termux-green.svg)](https://termux.dev)
 [![Model: CodeLlama-7B](https://img.shields.io/badge/Model-CodeLlama--7B-orange.svg)](https://github.com/facebookresearch/codellama)
-[![Version: 2.2.1](https://img.shields.io/badge/Version-2.2.1-blue.svg)](CHANGELOG.md)
+[![Version: 2.2.2](https://img.shields.io/badge/Version-2.2.2-blue.svg)](CHANGELOG.md)
 [![Tests: Passing](https://img.shields.io/badge/Tests-Passing-brightgreen.svg)](tests/)
 [![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 
