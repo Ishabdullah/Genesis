@@ -5,6 +5,63 @@ All notable changes to Genesis will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2025-11-06
+
+### 🔧 Fix: Improved Reasoning Trace Clarity
+
+**Fixed reasoning trace display to show transparent thinking process instead of self-questioning.**
+
+### Changed
+
+#### Reasoning Display Improvements
+- **Reasoning steps now use descriptive statements** instead of questions
+- **Eliminated self-questioning artifacts** like "What is being asked?"
+- **More transparent thinking process** showing actual operations Genesis performs
+- **Better user experience** - reasoning traces now read like thinking out loud, not internal dialogue
+
+#### Updated Reasoning Templates
+All reasoning functions now use action-oriented descriptions:
+
+**Before:**
+```
+Step 1: Understand the question
+→ What is being asked?
+```
+
+**After:**
+```
+Step 1: Parsing the question
+→ Analyzing the query to identify the core information request
+```
+
+### Examples
+
+#### Programming Problem (Before)
+```
+Step 1: Identify input types and constraints
+→ Determine what data the function/program receives
+```
+
+#### Programming Problem (After)
+```
+Step 1: Analyzing input requirements
+→ Examining the data types and constraints specified in the problem
+```
+
+### Affected Reasoning Types
+- ✅ General reasoning (conceptual questions)
+- ✅ Programming problems (code generation)
+- ✅ Design problems (system architecture)
+- ✅ Logic problems (logical inference)
+- ✅ Metacognitive queries (self-reflection, feedback)
+
+### Technical Details
+- Modified: `reasoning.py` (5 reasoning template functions)
+- Changed: Description and calculation fields in all ReasoningStep objects
+- Impact: Improved readability with no functional changes
+
+---
+
 ## [2.1.0] - 2025-11-05
 
 ### 🎉 Major Feature: Multi-Turn Context Handling & Comprehensive Evaluation

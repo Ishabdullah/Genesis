@@ -309,27 +309,32 @@ class ReasoningEngine:
 
         steps.append(ReasoningStep(
             step_num=1,
-            description="Identify the premises (given statements)"
+            description="Extracting premises",
+            calculation="Identifying all given statements and conditions from the problem"
         ))
 
         steps.append(ReasoningStep(
             step_num=2,
-            description="Identify what needs to be proven/concluded"
+            description="Clarifying the goal",
+            calculation="Determining what conclusion needs to be proven or derived"
         ))
 
         steps.append(ReasoningStep(
             step_num=3,
-            description="Check logical connections between premises"
+            description="Analyzing logical connections",
+            calculation="Examining how premises relate to each other and to the desired conclusion"
         ))
 
         steps.append(ReasoningStep(
             step_num=4,
-            description="Apply logical rules (transitivity, modus ponens, etc.)"
+            description="Applying logical rules",
+            calculation="Using logical inference rules (transitivity, modus ponens, contradiction, etc.)"
         ))
 
         steps.append(ReasoningStep(
             step_num=5,
-            description="State the conclusion with justification"
+            description="Stating conclusion with proof",
+            calculation="Presenting the final conclusion with step-by-step logical justification"
         ))
 
         return steps
@@ -340,32 +345,32 @@ class ReasoningEngine:
 
         steps.append(ReasoningStep(
             step_num=1,
-            description="Identify input types and constraints",
-            calculation="Determine what data the function/program receives"
+            description="Analyzing input requirements",
+            calculation="Examining the data types and constraints specified in the problem"
         ))
 
         steps.append(ReasoningStep(
             step_num=2,
-            description="Determine required operations",
-            calculation="List what needs to be done with the input"
+            description="Planning required operations",
+            calculation="Breaking down the problem into logical operations"
         ))
 
         steps.append(ReasoningStep(
             step_num=3,
-            description="Design the algorithm",
-            calculation="Outline the logical flow in pseudocode"
+            description="Designing algorithm structure",
+            calculation="Creating step-by-step logical flow for the solution"
         ))
 
         steps.append(ReasoningStep(
             step_num=4,
-            description="Consider edge cases",
-            calculation="Identify boundary conditions and special cases"
+            description="Identifying edge cases",
+            calculation="Considering boundary conditions and special scenarios"
         ))
 
         steps.append(ReasoningStep(
             step_num=5,
-            description="Implement the solution",
-            calculation="Write the actual code"
+            description="Implementing solution",
+            calculation="Translating algorithm into working code"
         ))
 
         return steps
@@ -376,32 +381,32 @@ class ReasoningEngine:
 
         steps.append(ReasoningStep(
             step_num=1,
-            description="Understand the requirements",
-            calculation="What problem are we solving?"
+            description="Analyzing requirements",
+            calculation="Examining the core problem and objectives to be addressed"
         ))
 
         steps.append(ReasoningStep(
             step_num=2,
-            description="Identify key components/modules",
-            calculation="Break down into logical parts"
+            description="Identifying system components",
+            calculation="Breaking down the system into logical modules and services"
         ))
 
         steps.append(ReasoningStep(
             step_num=3,
-            description="Define interfaces and relationships",
-            calculation="How do components interact?"
+            description="Defining component interactions",
+            calculation="Establishing interfaces, APIs, and data flow between components"
         ))
 
         steps.append(ReasoningStep(
             step_num=4,
-            description="Consider constraints and trade-offs",
-            calculation="Performance, scalability, maintainability"
+            description="Evaluating constraints and trade-offs",
+            calculation="Balancing performance, scalability, and maintainability requirements"
         ))
 
         steps.append(ReasoningStep(
             step_num=5,
-            description="Produce design specification",
-            calculation="Document the architecture"
+            description="Creating design specification",
+            calculation="Documenting the complete architecture with diagrams and details"
         ))
 
         return steps
@@ -412,26 +417,26 @@ class ReasoningEngine:
 
         steps.append(ReasoningStep(
             step_num=1,
-            description="Understand the meta-question or feedback",
-            calculation="Is this feedback on a previous response, a question about capabilities, or a request for retry?"
+            description="Analyzing meta-question or feedback",
+            calculation="Determining if this is feedback on a previous response, a capability inquiry, or a retry request"
         ))
 
         steps.append(ReasoningStep(
             step_num=2,
-            description="Identify relevant system capabilities or issues",
-            calculation="What aspects of Genesis are relevant: memory, reasoning, external sources, limitations?"
+            description="Identifying relevant system capabilities",
+            calculation="Mapping to Genesis features: memory systems, reasoning engine, external sources, or known limitations"
         ))
 
         steps.append(ReasoningStep(
             step_num=3,
-            description="Analyze what went wrong or what's being asked",
-            calculation="If feedback: identify error type. If capability question: list relevant features (persistent memory, pruning, context handling, fallback chain)"
+            description="Diagnosing the issue or request",
+            calculation="For feedback: categorizing error type. For capability questions: listing relevant features like persistent memory, pruning, context handling, fallback chain"
         ))
 
         steps.append(ReasoningStep(
             step_num=4,
-            description="Formulate corrective action or explanation",
-            calculation="Provide actionable next steps: retry with corrections, explain limitation with workarounds, or describe capability with examples"
+            description="Formulating response strategy",
+            calculation="Preparing actionable next steps: retry with corrections, explain limitations with workarounds, or describe capabilities with examples"
         ))
 
         return steps
@@ -442,26 +447,26 @@ class ReasoningEngine:
 
         steps.append(ReasoningStep(
             step_num=1,
-            description="Understand the question",
-            calculation="What is being asked?"
+            description="Parsing the question",
+            calculation="Analyzing the query to identify the core information request"
         ))
 
         steps.append(ReasoningStep(
             step_num=2,
-            description="Identify relevant information",
-            calculation="What facts or data are available?"
+            description="Gathering relevant information",
+            calculation="Accessing available facts, data, and context from knowledge base and memory"
         ))
 
         steps.append(ReasoningStep(
             step_num=3,
-            description="Apply logical reasoning",
-            calculation="Connect information to reach conclusion"
+            description="Applying logical reasoning",
+            calculation="Connecting information through logical inference to derive conclusions"
         ))
 
         steps.append(ReasoningStep(
             step_num=4,
-            description="Formulate the answer",
-            calculation="State the conclusion clearly"
+            description="Formulating complete answer",
+            calculation="Synthesizing findings into a clear, coherent response"
         ))
 
         return steps
