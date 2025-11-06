@@ -273,31 +273,32 @@ Rules:
             else:
                 full_prompt = f"[INST] {tool_instructions}\n\nQuestion: {user_prompt} [/INST]"
 
-            # Call llama.cpp with balanced parameters and stop tokens
+            # Call llama.cpp with adaptive parameters
+            # Use shorter output and stricter stops for math, more generous for general queries
+            is_math_query = any(word in user_prompt.lower() for word in ["calculate", "how many", "how much", "machines", "widgets", "rate", "per"])
+
             cmd = [
                 self.llama_path,
                 "-m", self.model_path,
                 "-p", full_prompt,
-                "-n", "150",  # Reduced to prevent rambling
+                "-n", "100" if is_math_query else "200",  # Shorter for math, longer for conversation
                 "-t", "8",    # All cores
-                "--temp", "0.3",  # Lower temperature for more focused output
+                "--temp", "0.3" if is_math_query else "0.5",  # Lower temp for math, normal for conversation
                 "--top-p", "0.9",
                 "--top-k", "40",
-                "-c", "1024",  # Increased context window
+                "-c", "1024",
                 "--no-display-prompt",
-                "-b", "512",  # Batch size
-                "--mirostat", "2",  # Mirostat for quality
+                "-b", "512",
+                "--mirostat", "2",
                 "--mirostat-lr", "0.1",
                 "--mirostat-ent", "5.0",
-                "--repeat-penalty", "1.1",  # Prevent repetition
-                "--stop", "Q1:",  # Stop if model starts generating Q&A
-                "--stop", "Q2:",
-                "--stop", "LIST:",  # Stop if model outputs tool commands
-                "--stop", "READ:",
-                "--stop", "SEARCH:",
-                "--stop", "[File",  # Stop if model tries to show file operations
-                "--stop", "[Directory"
+                "--repeat-penalty", "1.1"
             ]
+
+            # Add stop tokens only for problematic patterns (not too aggressive)
+            if is_math_query:
+                cmd.extend(["--stop", "Q1:", "--stop", "Q2:", "--stop", "Q3:"])
+            cmd.extend(["--stop", "LIST: /path", "--stop", "READ: /path", "--stop", "SEARCH: pattern"])
 
             result = subprocess.run(
                 cmd,
@@ -363,6 +364,11 @@ Rules:
             (handled, result) - True if command was handled directly
         """
         input_lower = user_input.lower().strip()
+
+        # Simple greetings (bypass reasoning system)
+        greetings = ["hello", "hi", "hey", "greetings", "good morning", "good afternoon", "good evening"]
+        if input_lower in greetings or (len(user_input.split()) <= 2 and any(g in input_lower for g in greetings)):
+            return True, "Hello! I'm Genesis, your local AI assistant. How can I help you today?"
 
         # Identity queries
         identity_triggers = [
