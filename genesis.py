@@ -22,6 +22,8 @@ from learning_memory import LearningMemory
 from reasoning import ReasoningEngine
 from thinking_trace import ThinkingTrace
 from debug_logger import DebugLogger
+from time_sync import get_time_sync, TimeSync
+from websearch import get_websearch, WebSearch
 
 # ANSI color codes for terminal output
 class Colors:
@@ -55,6 +57,14 @@ class Genesis:
         self.llama_path = "./llama.cpp/llama-cli"
         self.model_path = "./models/CodeLlama-7B-Instruct.Q4_K_M.gguf"
         self.running = True
+
+        # Temporal awareness
+        self.time_sync = get_time_sync()
+        self.time_sync.start_sync()
+        self.reasoning.set_time_sync(self.time_sync)
+
+        # Web search
+        self.websearch = get_websearch()
 
         # Retry and context handling
         self.last_user_query = None
@@ -780,9 +790,22 @@ Rules:
         self.reasoning.start_new_question(current_question_id)
 
         # Process through LLM with reasoning
+        # First, detect temporal awareness requirements
+        temporal_analysis = self.reasoning.detect_temporal_uncertainty(user_input)
+
+        # Add time context to reasoning trace
+        time_context = self.time_sync.get_time_context_header()
+
         # Generate reasoning trace before LLM call
         problem_type = self.reasoning.detect_problem_type(user_input)
         reasoning_steps = self.reasoning.generate_reasoning_trace(user_input, problem_type)
+
+        # Prepend time context if time-sensitive
+        if temporal_analysis.get("time_sensitive"):
+            print(f"\n{Colors.CYAN}[Time Context] {time_context}{Colors.RESET}")
+            if temporal_analysis.get("temporal_uncertain"):
+                print(f"{Colors.YELLOW}[Thinking...] This query is time-sensitive and may involve events after my knowledge cutoff ({self.reasoning.knowledge_cutoff}){Colors.RESET}")
+                print(f"{Colors.YELLOW}            Consulting live data sources...{Colors.RESET}\n")
 
         # Store reasoning for retry
         self.last_reasoning_steps = reasoning_steps
@@ -805,42 +828,73 @@ Rules:
         # Check for uncertainty and trigger fallback if needed
         should_fallback, uncertainty_analysis = self.uncertainty.should_trigger_fallback(response)
 
+        # Also trigger fallback if temporal uncertainty detected
+        if temporal_analysis.get("should_trigger_fallback"):
+            should_fallback = True
+            # Lower confidence for temporal queries
+            if "confidence_score" in uncertainty_analysis:
+                uncertainty_analysis["confidence_score"] = min(
+                    uncertainty_analysis["confidence_score"],
+                    0.5  # Cap at 0.5 for temporal queries
+                )
+
+        websearch_response = None
         perplexity_response = None
         claude_response = None
         response_source = "local"
 
-        # New fallback chain: Try Perplexity first, then Claude
+        # NEW LAYERED FALLBACK CHAIN: WebSearch → Perplexity → Claude
         if should_fallback:
-            print(f"\n{Colors.YELLOW}⚡ Genesis is uncertain (confidence: {uncertainty_analysis['confidence_score']:.2f})")
+            reason = "uncertain" if not temporal_analysis.get("temporal_uncertain") else "time-sensitive query requires live data"
+            print(f"\n{Colors.YELLOW}⚡ Genesis is {reason} (confidence: {uncertainty_analysis['confidence_score']:.2f})")
             print(f"   Consulting external sources...{Colors.RESET}\n")
 
-            # Step 1: Try Perplexity
-            success, perplexity_result = self.tools.ask_perplexity(user_input)
+            # Step 1: Try Genesis WebSearch (free multi-source)
+            try:
+                print(f"{Colors.CYAN}[Step 1/3] Trying Genesis WebSearch (DuckDuckGo + Wikipedia + ArXiv)...{Colors.RESET}")
+                ws_success, ws_answer, ws_confidence = self.websearch.search(user_input)
 
-            # Log fallback attempt
-            self.debug_logger.log_fallback_attempt(
-                query=user_input,
-                local_confidence=uncertainty_analysis['confidence_score'],
-                source="perplexity",
-                success=success,
-                error_msg=None if success else perplexity_result
-            )
+                if ws_success and ws_confidence >= 0.5:
+                    print(f"{Colors.GREEN}✓ WebSearch successful (confidence: {ws_confidence:.2f}){Colors.RESET}\n")
+                    websearch_response = ws_answer
+                    response_source = "websearch"
+                else:
+                    print(f"{Colors.YELLOW}⚠ WebSearch returned low confidence ({ws_confidence:.2f}), trying Perplexity...{Colors.RESET}\n")
+            except Exception as e:
+                print(f"{Colors.YELLOW}⚠ WebSearch failed: {e}{Colors.RESET}")
+                print(f"{Colors.CYAN}   Falling back to Perplexity...{Colors.RESET}\n")
 
-            if success:
-                print(f"{Colors.GREEN}✓ Perplexity consultation successful{Colors.RESET}\n")
-                perplexity_response = perplexity_result
-                response_source = "perplexity"
+            # Step 2: Try Perplexity (if WebSearch didn't succeed)
+            if not websearch_response:
+                print(f"{Colors.CYAN}[Step 2/3] Trying Perplexity CLI...{Colors.RESET}")
+                success, perplexity_result = self.tools.ask_perplexity(user_input)
 
-                # Display Perplexity response with thinking trace
-                self.thinking_trace.display_thinking_header(source="perplexity")
-                print(f"{Colors.CYAN}Perplexity Research:{Colors.RESET}\n{perplexity_result}\n")
-                print(f"{Colors.DIM}{'─' * 60}{Colors.RESET}\n")
-            else:
-                print(f"{Colors.YELLOW}⚠ Perplexity unavailable: {perplexity_result}{Colors.RESET}")
-                print(f"{Colors.CYAN}   Falling back to Claude...{Colors.RESET}\n")
+                # Log fallback attempt
+                self.debug_logger.log_fallback_attempt(
+                    query=user_input,
+                    local_confidence=uncertainty_analysis['confidence_score'],
+                    source="perplexity",
+                    success=success,
+                    error_msg=None if success else perplexity_result
+                )
 
-        # Step 2: If Perplexity failed or wasn't tried, use Claude
-        if should_fallback and not perplexity_response and self.claude_fallback.is_enabled():
+                if success:
+                    print(f"{Colors.GREEN}✓ Perplexity consultation successful{Colors.RESET}\n")
+                    perplexity_response = perplexity_result
+                    response_source = "perplexity"
+
+                    # Display Perplexity response with thinking trace
+                    self.thinking_trace.display_thinking_header(source="perplexity")
+                    print(f"{Colors.CYAN}Perplexity Research:{Colors.RESET}\n{perplexity_result}\n")
+                    print(f"{Colors.DIM}{'─' * 60}{Colors.RESET}\n")
+                else:
+                    print(f"{Colors.YELLOW}⚠ Perplexity unavailable: {perplexity_result}{Colors.RESET}")
+                    print(f"{Colors.CYAN}   Falling back to Claude...{Colors.RESET}\n")
+
+        # Step 3: If WebSearch and Perplexity both failed, use Claude
+        if should_fallback and not websearch_response and not perplexity_response and self.claude_fallback.is_enabled():
+            print(f"{Colors.CYAN}[Step 3/3] Trying Claude Code fallback...{Colors.RESET}")
+
             # Record fallback attempt
             claude_reachable = False
 
@@ -916,7 +970,7 @@ Rules:
                 )
 
         # Validate reasoning before displaying final answer
-        # Priority: Calculated Math Answer > Perplexity > Claude > Local LLM
+        # Priority: Calculated Math Answer > WebSearch > Perplexity > Claude > Local LLM
 
         # Check if we have a calculated answer from math reasoner
         calculated_answer = self.reasoning.get_calculated_answer()
@@ -925,6 +979,8 @@ Rules:
             # Use the calculated answer (it's deterministic and correct)
             final_response = calculated_answer
             response_source = "local_calculated"
+        elif websearch_response:
+            final_response = websearch_response
         elif perplexity_response:
             final_response = perplexity_response
         elif claude_response:
@@ -1003,15 +1059,18 @@ Rules:
             user_input=user_input,
             assistant_response=full_response,
             metadata={
-                "had_fallback": (claude_response is not None or perplexity_response is not None),
+                "had_fallback": (websearch_response is not None or claude_response is not None or perplexity_response is not None),
                 "confidence_score": uncertainty_analysis.get('confidence_score'),
                 "was_direct_command": False,
                 "problem_type": problem_type,
                 "reasoning_steps": reasoning_trace_summary,
                 "reasoning_valid": is_valid,
                 "source": response_source,
+                "used_websearch": websearch_response is not None,
                 "used_perplexity": perplexity_response is not None,
-                "used_claude": claude_response is not None
+                "used_claude": claude_response is not None,
+                "time_sensitive": temporal_analysis.get("time_sensitive", False),
+                "temporal_metadata": self.time_sync.get_temporal_metadata()
             }
         )
 
@@ -1021,7 +1080,7 @@ Rules:
             user_input=user_input,
             response=full_response,
             was_direct_command=False,
-            had_fallback=(claude_response is not None or perplexity_response is not None),
+            had_fallback=(websearch_response is not None or claude_response is not None or perplexity_response is not None),
             confidence_score=uncertainty_analysis.get('confidence_score'),
             error=None,
             source=response_source

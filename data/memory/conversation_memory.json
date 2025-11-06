@@ -1780,6 +1780,212 @@
         "used_perplexity": false,
         "used_claude": false
       }
+    },
+    {
+      "timestamp": "2025-11-05T23:29:29.997449",
+      "user_input": "What are the latest advancements in quantum neural networks published in 2025?",
+      "assistant_response": "In 2025, several advancements were made in quantum neural networks. One of the most significant developments was the introduction of quantum-inspired neural networks, which are designed to mimic the behavior of quantum systems. These networks have been shown to be highly effective in solving certain types of problems, such as image recognition and natural language processing.\n\nAnother important development was the creation of quantum-resistant neural networks, which are designed to be secure against attacks by quantum computers. These networks use advanced cryptographic techniques to protect the data and ensure the privacy of the users.\n\nIn addition, there were several papers published on the application of quantum neural networks to various fields, such as finance, healthcare, and climate modeling. These papers demonstrated the potential of quantum neural networks to solve complex problems and make predictions with high accuracy.\n\nOverall, the advancements in quantum neural networks i",
+      "metadata": {
+        "had_fallback": false,
+        "confidence_score": 1.0,
+        "was_direct_command": false,
+        "problem_type": "general",
+        "reasoning_steps": [
+          {
+            "step": 1,
+            "description": "Understand the question"
+          },
+          {
+            "step": 2,
+            "description": "Identify relevant information"
+          },
+          {
+            "step": 3,
+            "description": "Apply logical reasoning"
+          },
+          {
+            "step": 4,
+            "description": "Formulate the answer"
+          }
+        ],
+        "reasoning_valid": true,
+        "source": "local",
+        "used_perplexity": false,
+        "used_claude": false
+      }
+    },
+    {
+      "timestamp": "2025-11-05T23:32:00.524448",
+      "user_input": "Write a Python script that generates a recursive maze and visualizes it using ASCII art.",
+      "assistant_response": "Here is a Python script that generates a recursive maze and visualizes it using ASCII art:\n```\nimport random\n\ndef generate_maze(size):\n    maze = [[0] * size for _ in range(size)]\n    for i in range(size):\n        for j in range(size):\n            if maze[i][j] == 0:\n                maze = expand_maze(maze, i, j)\n    return maze\n\ndef expand_maze(maze, i, j):\n    if maze[i][j] == 0:\n        maze[i][j] = 1\n        if i > 0:\n            maze = expand_maze(maze, i - 1, j)\n        if j > 0:\n            maze = expand_maze(maze, i, j - 1)\n        if i < size - 1:\n            maze = expand_maze(maze, i + 1, j)\n        if j < size - 1:\n            maze = expand_",
+      "metadata": {
+        "had_fallback": false,
+        "confidence_score": 0.7,
+        "was_direct_command": false,
+        "problem_type": "math_word_problem",
+        "reasoning_steps": [
+          {
+            "step": 1,
+            "description": "Identify the given information"
+          },
+          {
+            "step": 2,
+            "description": "Determine what needs to be calculated"
+          },
+          {
+            "step": 3,
+            "description": "Set up the mathematical relationship"
+          },
+          {
+            "step": 4,
+            "description": "Perform the calculation step-by-step"
+          },
+          {
+            "step": 5,
+            "description": "Verify the answer"
+          }
+        ],
+        "reasoning_valid": true,
+        "source": "local",
+        "used_perplexity": false,
+        "used_claude": false
+      }
+    },
+    {
+      "timestamp": "2025-11-06T08:08:06.565947",
+      "user_input": "Who is the president of the united states right now",
+      "assistant_response": "The President of the United States is Joe Biden. [end of text]",
+      "metadata": {
+        "had_fallback": false,
+        "confidence_score": 1.0,
+        "was_direct_command": false,
+        "problem_type": "general",
+        "reasoning_steps": [
+          {
+            "step": 1,
+            "description": "Understand the question"
+          },
+          {
+            "step": 2,
+            "description": "Identify relevant information"
+          },
+          {
+            "step": 3,
+            "description": "Apply logical reasoning"
+          },
+          {
+            "step": 4,
+            "description": "Formulate the answer"
+          }
+        ],
+        "reasoning_valid": true,
+        "source": "local",
+        "used_perplexity": false,
+        "used_claude": false
+      }
+    },
+    {
+      "timestamp": "2025-11-06T08:10:22.805182",
+      "user_input": "incorrect - The current date is 11/06/2025 and Donald J. Trump is the 47th President of the United States",
+      "assistant_response": "I apologize for the confusion. The current President of the United States is Joe Biden, not Donald J. Trump. The current date is 11/06/2025, which is a fictional date in the future. [end of text]",
+      "metadata": {
+        "had_fallback": false,
+        "confidence_score": 1.0,
+        "was_direct_command": false,
+        "problem_type": "general",
+        "reasoning_steps": [
+          {
+            "step": 1,
+            "description": "Understand the question"
+          },
+          {
+            "step": 2,
+            "description": "Identify relevant information"
+          },
+          {
+            "step": 3,
+            "description": "Apply logical reasoning"
+          },
+          {
+            "step": 4,
+            "description": "Formulate the answer"
+          }
+        ],
+        "reasoning_valid": true,
+        "source": "local",
+        "used_perplexity": false,
+        "used_claude": false
+      }
+    },
+    {
+      "timestamp": "2025-11-06T08:28:20.175171",
+      "user_input": "What is the most recently discovered exoplanet and what makes it unique?",
+      "assistant_response": "The most recently discovered exoplanet is WASP-12b, which was discovered in 2017. It is an exoplanet that orbits a star located about 950 light-years from Earth. WASP-12b is unique because it is a super-Earth, meaning it is larger than Earth but smaller than Neptune. It is also a gas giant, meaning it is primarily composed of hydrogen and helium. Additionally, WASP-12b has a highly eccentric orbit, meaning its distance from its host star varies greatly throughout its orbit. This makes it a challenging planet to study and one that has captured the interest of astronomers. [end of text]",
+      "metadata": {
+        "had_fallback": false,
+        "confidence_score": 1.0,
+        "was_direct_command": false,
+        "problem_type": "design",
+        "reasoning_steps": [
+          {
+            "step": 1,
+            "description": "Understand the requirements"
+          },
+          {
+            "step": 2,
+            "description": "Identify key components/modules"
+          },
+          {
+            "step": 3,
+            "description": "Define interfaces and relationships"
+          },
+          {
+            "step": 4,
+            "description": "Consider constraints and trade-offs"
+          },
+          {
+            "step": 5,
+            "description": "Produce design specification"
+          }
+        ],
+        "reasoning_valid": true,
+        "source": "local",
+        "used_perplexity": false,
+        "used_claude": false
+      }
+    },
+    {
+      "timestamp": "2025-11-06T08:41:46.290225",
+      "user_input": "Who are the emerging AI safety researchers making waves in 2025?",
+      "assistant_response": "In 2025, there are several emerging AI safety researchers who are making waves in the field. Some of the notable researchers include:\n\n1. Dr. David C. Evans, a computer scientist and AI safety expert who has made significant contributions to the field of AI safety. He is known for his work on developing frameworks and methods for evaluating the safety of AI systems.\n2. Dr. Dilek Hakan Durmu\u015f, a computer scientist and AI safety researcher who has made important contributions to the field of AI safety. He is known for his work on developing techniques for detecting and mitigating the risks of AI systems.\n3. Dr. Zoubin Ghahramani, a computer scientist and AI safety researcher who has made significant contributions to the field of AI safety. He is known for his work on developing techniques for evaluating the safety of AI systems and for his work on developing frameworks for understanding the risks of AI systems.\n4. Dr. John Hennessy, a computer scientist and AI safety researcher who has m",
+      "metadata": {
+        "had_fallback": false,
+        "confidence_score": 0.7,
+        "was_direct_command": false,
+        "problem_type": "general",
+        "reasoning_steps": [
+          {
+            "step": 1,
+            "description": "Understand the question"
+          },
+          {
+            "step": 2,
+            "description": "Identify relevant information"
+          },
+          {
+            "step": 3,
+            "description": "Apply logical reasoning"
+          },
+          {
+            "step": 4,
+            "description": "Formulate the answer"
+          }
+        ],
+        "reasoning_valid": true,
+        "source": "local",
+        "used_perplexity": false,
+        "used_claude": false
+      }
     }
   ]
 }

@@ -55,18 +55,20 @@ class MemoryManager:
         except IOError as e:
             print(f"⚠ Warning: Could not save memory: {e}")
 
-    def add_interaction(self, user_input: str, assistant_output: str):
+    def add_interaction(self, user_input: str, assistant_output: str, metadata: Dict = None):
         """
-        Add a user-assistant interaction to memory
+        Add a user-assistant interaction to memory with temporal metadata
 
         Args:
             user_input: User's prompt
             assistant_output: Assistant's response
+            metadata: Optional metadata dictionary
         """
         interaction = {
             'timestamp': datetime.now().isoformat(),
             'user': user_input,
-            'assistant': assistant_output
+            'assistant': assistant_output,
+            'metadata': metadata or {}
         }
         self.conversations.append(interaction)
 
@@ -75,6 +77,53 @@ class MemoryManager:
             self.conversations = self.conversations[-self.max_conversations:]
 
         self.save()
+
+    def check_staleness(self, timestamp_str: str, threshold_hours: int = 24) -> bool:
+        """
+        Check if a memory entry is stale
+
+        Args:
+            timestamp_str: ISO format timestamp
+            threshold_hours: Hours after which memory is considered stale
+
+        Returns:
+            True if stale, False otherwise
+        """
+        try:
+            past = datetime.fromisoformat(timestamp_str)
+            now = datetime.now()
+            age_hours = (now - past).total_seconds() / 3600
+            return age_hours > threshold_hours
+        except:
+            return True  # Assume stale if can't parse
+
+    def get_fresh_context_string(self, max_age_hours: int = 24) -> str:
+        """
+        Build context string from only fresh (non-stale) conversations
+
+        Args:
+            max_age_hours: Maximum age in hours for fresh conversations
+
+        Returns:
+            Formatted string of fresh conversation history
+        """
+        if not self.conversations:
+            return ""
+
+        fresh_conversations = []
+        for conv in self.conversations[-10:]:
+            if not self.check_staleness(conv['timestamp'], max_age_hours):
+                fresh_conversations.append(conv)
+
+        if not fresh_conversations:
+            return ""
+
+        context_parts = []
+        for conv in fresh_conversations:
+            context_parts.append(f"User: {conv['user']}")
+            context_parts.append(f"Assistant: {conv['assistant']}")
+
+        return "\n".join(context_parts)
 
     def get_context_string(self) -> str:
         """

@@ -28,6 +28,8 @@ class ReasoningEngine:
         self.last_math_answer = None
         self.last_math_solution = None
         self.current_question_id = None  # Track current question being processed
+        self.time_sync = None  # Will be initialized by Genesis
+        self.knowledge_cutoff = "2023-12-31"  # CodeLlama-7B knowledge cutoff
 
     def start_new_question(self, question_id: str):
         """
@@ -96,6 +98,95 @@ class ReasoningEngine:
                 ]
             }
         }
+
+    def classify_query(self, query: str) -> tuple:
+        """
+        Classify query into intent categories for routing to appropriate handler
+
+        Args:
+            query: User's query
+
+        Returns:
+            Tuple of (query_type, confidence_score, metadata)
+        """
+        query_lower = query.lower()
+
+        # Temporal/time-sensitive keywords
+        temporal_keywords = [
+            "latest", "newest", "recent", "recently", "current", "currently",
+            "now", "today", "this year", "2025", "2024", "emerging",
+            "new", "just", "most recent", "up-to-date", "trending",
+            "breaking", "modern", "contemporary", "present"
+        ]
+
+        # Web research keywords
+        web_research_keywords = [
+            "latest", "2025", "2024", "published", "papers", "studies",
+            "advancements", "research", "published in", "recent", "news",
+            "current", "today", "this year", "breakthrough", "development"
+        ]
+
+        # Code generation keywords
+        code_gen_keywords = [
+            "write", "script", "code", "python", "recursive", "visualize",
+            "implement", "function", "class", "algorithm", "program",
+            "java", "javascript", "c++", "create a"
+        ]
+
+        # Follow-up patterns
+        follow_up_keywords = [
+            "try again", "recalculate", "retry", "redo that", "do that again",
+            "explain further", "give an example", "tell me more", "elaborate",
+            "more details"
+        ]
+
+        # Math/logic keywords
+        math_keywords = [
+            "if", "how many", "how much", "calculate", "total", "rate",
+            "per", "cost", "all but", "solve", "compute"
+        ]
+
+        # Count keyword matches for each category
+        temporal_score = sum(1 for kw in temporal_keywords if kw in query_lower)
+        web_score = sum(1 for kw in web_research_keywords if kw in query_lower)
+        code_score = sum(1 for kw in code_gen_keywords if kw in query_lower)
+        follow_up_score = sum(1 for kw in follow_up_keywords if kw in query_lower)
+        math_score = sum(1 for kw in math_keywords if kw in query_lower)
+
+        # Has numbers and relational words? Boost math score
+        if re.search(r'\d+', query) and any(word in query_lower for word in ["more", "less", "than", "equal", "divide", "multiply"]):
+            math_score += 2
+
+        # Check for time-sensitive patterns
+        time_sensitive = temporal_score > 0
+        time_sensitive = time_sensitive or any(word in query_lower for word in [
+            "who is", "what is", "president", "currently", "right now"
+        ])
+
+        # Metadata about the query
+        metadata = {
+            "time_sensitive": time_sensitive,
+            "temporal_score": temporal_score,
+            "needs_live_data": time_sensitive or web_score >= 2
+        }
+
+        # Determine category with confidence
+        if follow_up_score > 0:
+            return ("follow_up", 0.9, metadata)
+        elif web_score >= 2 or temporal_score >= 2:
+            return ("web_research", 0.85, metadata)
+        elif (web_score == 1 or temporal_score == 1) and len(query.split()) > 10:
+            return ("web_research", 0.75, metadata)
+        elif code_score >= 2:
+            return ("code_generation", 0.85, metadata)
+        elif code_score == 1 and ("write" in query_lower or "create" in query_lower):
+            return ("code_generation", 0.80, metadata)
+        elif math_score >= 2:
+            return ("math_logic", 0.85, metadata)
+        elif re.search(r'\d+.*\d+', query):  # Multiple numbers
+            return ("math_logic", 0.70, metadata)
+        else:
+            return ("conceptual", 0.60, metadata)
 
     def detect_problem_type(self, query: str) -> str:
         """
@@ -515,6 +606,49 @@ class ReasoningEngine:
     def clear_trace(self):
         """Clear current reasoning trace"""
         self.current_trace = []
+
+    def set_time_sync(self, time_sync):
+        """
+        Set time synchronization module
+
+        Args:
+            time_sync: TimeSync instance
+        """
+        self.time_sync = time_sync
+
+    def detect_temporal_uncertainty(self, query: str) -> Dict:
+        """
+        Detect if query requires temporal awareness or live data
+
+        Args:
+            query: User's query
+
+        Returns:
+            Dictionary with temporal analysis
+        """
+        # Classify the query
+        query_type, confidence, metadata = self.classify_query(query)
+
+        # Check if we have time sync
+        is_post_cutoff = False
+        current_date = None
+
+        if self.time_sync:
+            is_post_cutoff = self.time_sync.is_after_knowledge_cutoff()
+            current_date = self.time_sync.get_device_date()
+
+        # Determine if temporal uncertainty exists
+        temporal_uncertain = metadata.get("time_sensitive", False) and is_post_cutoff
+
+        return {
+            "time_sensitive": metadata.get("time_sensitive", False),
+            "needs_live_data": metadata.get("needs_live_data", False),
+            "temporal_uncertain": temporal_uncertain,
+            "is_post_cutoff": is_post_cutoff,
+            "current_date": current_date,
+            "knowledge_cutoff": self.knowledge_cutoff,
+            "should_trigger_fallback": temporal_uncertain or metadata.get("needs_live_data", False)
+        }
 
     def get_calculated_answer(self) -> Optional[str]:
         """

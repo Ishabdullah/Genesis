@@ -16,9 +16,10 @@
 
 - ✅ **Complete Privacy**: Zero data leaves your device (unless you enable optional external sources)
 - ✅ **Offline Capable**: Works without internet for local queries
-- ✅ **Production Quality**: 6/6 tests passing, comprehensive error handling
+- ✅ **Production Quality**: Comprehensive tests passing, robust error handling
 - ✅ **Deterministic Math**: 100% accurate calculations (not probabilistic guesses)
-- ✅ **Intelligent Fallback**: Perplexity → Claude chain when uncertain
+- ✅ **Temporal Awareness**: Recognizes time-sensitive queries, routes to live data (v1.7+)
+- ✅ **Intelligent Fallback**: WebSearch → Perplexity → Claude chain when uncertain
 - ✅ **Continuous Learning**: Stores feedback and improves over time
 
 ---
@@ -31,10 +32,11 @@
 | **Code Execution** | Python sandbox, timeout protection, error handling | ✅ Production |
 | **File Operations** | Read, write, edit, search, directory management | ✅ Production |
 | **Reasoning** | Multi-step traces, context-aware templates, pseudocode | ✅ Production |
-| **Memory** | Persistent storage, auto-pruning, 1000+ conversations | ✅ Production |
+| **Memory** | Persistent storage, auto-pruning, 1000+ conversations, staleness detection | ✅ Production |
 | **Performance** | Real-time metrics, feedback tracking, debug logging | ✅ Production |
 | **Retry & Context** | Natural retries, 15-interaction context, follow-ups | ✅ Production |
-| **External Research** | Perplexity integration, Claude fallback, source tracking | ✅ Production |
+| **Temporal Awareness** | Time-sync, knowledge cutoff detection, live data routing | ✅ v1.7+ |
+| **External Research** | WebSearch, Perplexity, Claude fallback, source tracking | ✅ Production |
 
 ---
 
@@ -298,16 +300,18 @@ Genesis> try again
 
 Genesis uses a **priority-based fallback chain** for maximum accuracy:
 
-### Answer Source Priority
+### Answer Source Priority (v1.7+)
 
 ```
 1. 🧬 Calculated Answer (MathReasoner)
-   ↓ if not a math problem
-2. 🔍 Perplexity Research
-   ↓ if uncertain (confidence < 0.60)
-3. ☁️  Claude Fallback
-   ↓ if Perplexity fails
-4. 🧬 Local LLM (CodeLlama-7B)
+   ↓ if not a math problem or time-sensitive
+2. 🌐 Genesis WebSearch (free multi-source)
+   ↓ if low confidence or unavailable
+3. 🔍 Perplexity Research
+   ↓ if uncertain (confidence < 0.60) or Perplexity unavailable
+4. ☁️  Claude Fallback
+   ↓ if all external sources fail
+5. 🧬 Local LLM (CodeLlama-7B)
    ↓ with uncertainty disclaimer if low confidence
 ```
 
@@ -343,6 +347,148 @@ Every response shows its source:
 - `🔍 Perplexity` - External research
 - `☁️ Claude` - Claude fallback
 - `📊 Calculated` - Deterministic math engine
+- `🌐 WebSearch` - Multi-source live web search
+
+---
+
+## 🕒 Temporal Awareness & Time-Based Fallback
+
+**Genesis v1.7** introduces **temporal awareness** - the ability to recognize when questions require current information beyond its training data cutoff.
+
+### Key Features
+
+1. **Real-Time Clock Synchronization**
+   - Device time tracked and updated every 60 seconds
+   - Timestamp injection into every response context
+   - Knowledge cutoff awareness (CodeLlama-7B: December 2023)
+
+2. **Time-Sensitive Query Detection**
+   - Automatic recognition of temporal keywords: "current", "now", "latest", "recent", "2025", etc.
+   - Pattern matching for "Who is...", "What is the most recent...", etc.
+   - Confidence adjustment for outdated local knowledge
+
+3. **Layered Fallback Chain for Live Data**
+   ```
+   🧬 Local Knowledge
+      ↓ if time-sensitive or uncertain
+   🌐 Genesis WebSearch (free multi-source)
+      ↓ if low confidence or timeout
+   🔍 Perplexity CLI
+      ↓ if unavailable
+   ☁️ Claude Fallback
+   ```
+
+4. **Free Multi-Source WebSearch**
+   - **DuckDuckGo** - Privacy-focused general search
+   - **Wikipedia API** - Encyclopedic knowledge
+   - **ArXiv** - Academic papers and research
+   - Concurrent querying (3 sources in parallel)
+   - Result aggregation with confidence scoring
+   - 15-minute result caching to reduce redundancy
+
+### Example: Time-Sensitive Query
+
+```bash
+Genesis> Who is the president of the United States right now?
+
+[Time Context] Current system date/time: 2025-11-06 18:24:02
+[Thinking...] This query is time-sensitive and may involve events after
+              my knowledge cutoff (2023-12-31)
+              Consulting live data sources...
+
+⚡ Genesis is time-sensitive query requires live data (confidence: 0.50)
+   Consulting external sources...
+
+[Step 1/3] Trying Genesis WebSearch (DuckDuckGo + Wikipedia + ArXiv)...
+✓ WebSearch successful (confidence: 0.85)
+
+────────────────────────────────────────────────────────────
+Time Context: 2025-11-06 18:24:02 (device)
+Source: websearch
+
+**DuckDuckGo:**
+1. President of the United States - Wikipedia
+   Donald J. Trump is the 47th President of the United States...
+   https://en.wikipedia.org/wiki/President_of_the_United_States
+
+**Wikipedia:**
+1. Donald Trump
+   47th President of the United States (2025-present)
+   https://en.wikipedia.org/wiki/Donald_Trump
+
+**Sources consulted:** DuckDuckGo, Wikipedia
+
+Confidence: High (0.85)
+────────────────────────────────────────────────────────────
+```
+
+### Example: Recent Discovery Query
+
+```bash
+Genesis> What is the most recently discovered exoplanet and what makes it unique?
+
+[Time Context] Current system date/time: 2025-11-06 18:24:02
+[Thinking...] This query is time-sensitive (recent/latest)
+              Consulting live data sources...
+
+⚡ Genesis is time-sensitive query requires live data (confidence: 0.50)
+   Consulting external sources...
+
+[Step 1/3] Trying Genesis WebSearch...
+✓ WebSearch successful (confidence: 0.75)
+
+[Response with current 2025 exoplanet data from live sources]
+```
+
+### Temporal Metadata
+
+Every response with temporal awareness includes:
+```json
+{
+  "current_datetime": "2025-11-06 18:24:02",
+  "current_date": "2025-11-06",
+  "knowledge_cutoff": "2023-12-31",
+  "is_post_cutoff": true,
+  "time_sensitive": true,
+  "source": "websearch"
+}
+```
+
+### Memory Staleness Detection
+
+Genesis now tracks memory freshness:
+- Conversations older than 24 hours flagged as potentially stale
+- Time-sensitive previous answers trigger automatic refresh
+- Warning displayed: `[Note] Previous memory may be outdated. Refreshing context...`
+
+### Setup Notes
+
+- **No API keys required** for Genesis WebSearch (uses free endpoints)
+- Perplexity CLI optional (install: `pip install perplexity-cli`)
+- Device time permissions automatic in Termux
+- Cached results stored in `data/cache/` (auto-expires after 15 min)
+
+### Testing Temporal Awareness
+
+```bash
+# Run the comprehensive test suite
+cd ~/Genesis
+python3 test_temporal_awareness.py
+
+# Example test output:
+=== Test 1: Time Sync Basic Functionality ===
+✓ PASS - Device time retrieval
+✓ PASS - Knowledge cutoff detection
+
+=== Test 2: Temporal Query Detection ===
+✓ PASS - 'Current event query'
+✓ PASS - 'Latest/recent query'
+✓ PASS - 'Emerging/2025 query'
+
+=== Test 6: President Query (Real-World Test) ===
+✓ PASS - Query detected as time-sensitive
+✓ PASS - Should trigger fallback
+```
 
 ---
 

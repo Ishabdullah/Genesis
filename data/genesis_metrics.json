@@ -861,6 +861,78 @@
       "error": null,
       "source": "local_calculated",
       "feedback": "incorrect"
+    },
+    {
+      "id": "q_1762403304973",
+      "timestamp": "2025-11-05T23:29:30.003357",
+      "user_input": "What are the latest advancements in quantum neural networks published in 2025?",
+      "response_time_ms": 65029.49,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": null
+    },
+    {
+      "id": "q_1762403410069",
+      "timestamp": "2025-11-05T23:32:00.533326",
+      "user_input": "Write a Python script that generates a recursive maze and visualizes it using ASCII art.",
+      "response_time_ms": 110463.82,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 0.7,
+      "error": null,
+      "source": "local",
+      "feedback": null
+    },
+    {
+      "id": "q_1762434466943",
+      "timestamp": "2025-11-06T08:08:06.570741",
+      "user_input": "Who is the president of the united states right now",
+      "response_time_ms": 19626.96,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": null
+    },
+    {
+      "id": "q_1762434600856",
+      "timestamp": "2025-11-06T08:10:22.809164",
+      "user_input": "incorrect - The current date is 11/06/2025 and Donald J. Trump is the 47th President of the United States",
+      "response_time_ms": 21952.53,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": "incorrect"
+    },
+    {
+      "id": "q_1762435644233",
+      "timestamp": "2025-11-06T08:28:20.178913",
+      "user_input": "What is the most recently discovered exoplanet and what makes it unique?",
+      "response_time_ms": 55945.42,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": "incorrect"
+    },
+    {
+      "id": "q_1762436432112",
+      "timestamp": "2025-11-06T08:41:46.295405",
+      "user_input": "Who are the emerging AI safety researchers making waves in 2025?",
+      "response_time_ms": 74182.42,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 0.7,
+      "error": null,
+      "source": "local",
+      "feedback": "incorrect"
     }
   ],
   "fallbacks": [
@@ -880,13 +952,13 @@
   "errors": [],
   "feedback": {
     "correct": 22,
-    "incorrect": 16
+    "incorrect": 19
   },
   "statistics": {
-    "total_queries": 76,
+    "total_queries": 82,
     "total_fallbacks": 2,
     "total_errors": 0,
-    "avg_response_time_ms": 35181.32
+    "avg_response_time_ms": 36841.23
   },
   "session_start": "2025-11-05T13:31:48.865827"
 }
