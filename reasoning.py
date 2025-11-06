@@ -49,7 +49,7 @@ class ReasoningEngine:
         """Load reasoning patterns for different problem types"""
         return {
             "math_word_problem": {
-                "keywords": ["if", "how many", "how much", "calculate", "total", "rate", "per", "cost", "all but", "machines?.*package", "required", "needs? to"],
+                "keywords": ["if", "how many", "how much", "calculate", "total", "rate", "per", "cost", "all but", "machines?.*package", "required", "needs? to", "increase", "decrease", "percent", "%", "portfolio", "value", "final", "worth"],
                 "steps": [
                     "Identify the given information",
                     "Determine what needs to be calculated",
@@ -445,28 +445,25 @@ class ReasoningEngine:
         """Generate general reasoning steps"""
         steps = []
 
+        # Simplified reasoning trace for general queries
+        # Avoid meta-instructions that confuse the LLM and cause tool hallucinations
+
         steps.append(ReasoningStep(
             step_num=1,
-            description="Parsing the question",
-            calculation="Analyzing the query to identify the core information request"
+            description="Understanding the question",
+            calculation="Identifying what information is being requested"
         ))
 
         steps.append(ReasoningStep(
             step_num=2,
-            description="Gathering relevant information",
-            calculation="Accessing available facts, data, and context from knowledge base and memory"
+            description="Determining the answer",
+            calculation="Using available knowledge to answer directly"
         ))
 
         steps.append(ReasoningStep(
             step_num=3,
-            description="Applying logical reasoning",
-            calculation="Connecting information through logical inference to derive conclusions"
-        ))
-
-        steps.append(ReasoningStep(
-            step_num=4,
-            description="Formulating complete answer",
-            calculation="Synthesizing findings into a clear, coherent response"
+            description="Formulating response",
+            calculation="Presenting the answer clearly"
         ))
 
         return steps
@@ -678,5 +675,10 @@ class ReasoningEngine:
                 elif 'smaller_item' in self.last_math_solution:
                     # Difference problem (bat and ball)
                     return f"${self.last_math_solution['smaller_item']:.2f}"
+                elif 'final_value' in self.last_math_solution and 'total_change_percentage' in self.last_math_solution:
+                    # Compound percentage problem (stock portfolio)
+                    final_val = self.last_math_solution['final_value']
+                    total_pct = self.last_math_solution['total_change_percentage']
+                    return f"Final portfolio value: ${final_val:,.2f}\nTotal percentage change: {total_pct:+.2f}%"
             return str(self.last_math_answer)
         return None

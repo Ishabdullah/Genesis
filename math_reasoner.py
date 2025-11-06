@@ -212,6 +212,67 @@ class MathReasoner:
             "verified": True
         }
 
+    def solve_compound_percentage(self, initial: float, changes: List[Tuple[str, float]]) -> Dict[str, Any]:
+        """
+        Solve compound percentage change problems (e.g., stock portfolios)
+
+        Args:
+            initial: Initial value
+            changes: List of (direction, percentage) tuples, e.g., [("increase", 18), ("decrease", 12), ("increase", 25)]
+
+        Returns:
+            Dict with steps, final value, and total percentage change
+        """
+        self.steps = []
+        current_value = initial
+
+        # Step 1: Start with initial value
+        self.steps.append(MathStep(
+            step_num=1,
+            description=f"Starting value",
+            formula="Initial value",
+            calculation=f"${initial:,.2f}",
+            result=f"${initial:,.2f}"
+        ))
+
+        # Process each percentage change
+        step_num = 2
+        for period, (direction, percentage) in enumerate(changes, 1):
+            multiplier = 1 + (percentage / 100) if direction == "increase" else 1 - (percentage / 100)
+            new_value = current_value * multiplier
+
+            period_name = f"Q{period}" if len(changes) > 1 else "After change"
+            sign = "+" if direction == "increase" else "-"
+
+            self.steps.append(MathStep(
+                step_num=step_num,
+                description=f"{period_name}: Apply {sign}{percentage}% change",
+                formula=f"new_value = current_value × {multiplier}",
+                calculation=f"${current_value:,.2f} × {multiplier} = ${new_value:,.2f}",
+                result=f"${new_value:,.2f}"
+            ))
+
+            current_value = new_value
+            step_num += 1
+
+        # Calculate total percentage change
+        total_change_pct = ((current_value - initial) / initial) * 100
+
+        self.steps.append(MathStep(
+            step_num=step_num,
+            description="Calculate total percentage change from start",
+            formula="total_change% = ((final - initial) / initial) × 100",
+            calculation=f"(({current_value:,.2f} - {initial:,.2f}) / {initial:,.2f}) × 100",
+            result=f"{total_change_pct:+.2f}%"
+        ))
+
+        return {
+            "steps": self.steps,
+            "final_value": current_value,
+            "total_change_percentage": total_change_pct,
+            "verified": True
+        }
+
     def solve_multi_step_puzzle(self, puzzle_type: str, constraints: Dict[str, Any]) -> Dict[str, Any]:
         """
         Solve logic puzzles requiring sequential reasoning
@@ -305,6 +366,33 @@ class MathReasoner:
             Solution dict or None if not recognized
         """
         query_lower = query.lower()
+
+        # Pattern: Compound percentage changes (stock portfolios, investments)
+        # Look for multiple percentage changes with increases/decreases
+        if (('%' in query or 'percent' in query_lower) and
+            any(word in query_lower for word in ['increase', 'decrease', 'grows', 'shrinks', 'gain', 'loss'])):
+
+            # Extract initial value
+            initial_match = re.search(r'\$?\s*(\d+(?:,\d+)*(?:\.\d+)?)', query)
+            if initial_match:
+                initial_value = float(initial_match.group(1).replace(',', ''))
+
+                # Extract all percentage changes in order
+                changes = []
+
+                # Find all percentage changes (increases and decreases) in order
+                all_patterns = re.finditer(
+                    r'(increase[sd]?|decrease[sd]?)\s+by\s+(\d+(?:\.\d+)?)\s*%',
+                    query_lower
+                )
+
+                for match in all_patterns:
+                    direction = "increase" if "increase" in match.group(1) else "decrease"
+                    percentage = float(match.group(2))
+                    changes.append((direction, percentage))
+
+                if len(changes) > 0:
+                    return self.solve_compound_percentage(initial_value, changes)
 
         # Pattern: Rate problems (widgets, cats/mice)
         # Look for pattern: X things do Y items in Z time

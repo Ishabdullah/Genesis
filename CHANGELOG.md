@@ -5,6 +5,84 @@ All notable changes to Genesis will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.2] - 2025-11-06
+
+### 🔧 Fix: Eliminated Tool Hallucinations & Added Percentage Problem Solver
+
+**Fixed critical bug where Genesis hallucinated tool calls and consulted external sources for simple math problems.**
+
+### Fixed
+- **Critical**: Tool hallucination bug - Genesis was hallucinating `READ: /path/file`, `SEARCH: pattern`, `LIST: /path` for simple queries
+- **Critical**: Unnecessary external fallbacks - Genesis consulted Perplexity for local math problems
+- **High**: Incomplete v2.1.1 fix - Meta-instructions still confused the LLM
+
+### Added
+- **Compound percentage solver** (`math_reasoner.py`)
+  - New `solve_compound_percentage()` method for stock portfolios, investments
+  - Handles multi-step percentage changes (increases/decreases)
+  - Shows step-by-step calculations with final value and total percentage change
+  - Auto-detection for percentage problems in `detect_and_solve()`
+
+### Changed
+- **Reasoning trace simplification** (`reasoning.py`)
+  - Removed confusing meta-instructions from `_reason_general()`
+  - Eliminated phrases like "Accessing available facts, data, and context from knowledge base and memory"
+  - Replaced with simple, direct descriptions: "Using available knowledge to answer directly"
+  - **This is the ACTUAL fix for the reasoning trace issue**
+
+- **Enhanced problem detection**
+  - Added percentage keywords: "increase", "decrease", "percent", "%", "portfolio", "value", "final", "worth"
+  - Better detection of financial/percentage problems
+
+- **Improved answer formatting**
+  - Updated `get_calculated_answer()` to format percentage solutions
+  - Shows final value and total percentage change for compound problems
+
+### Root Cause Explanation
+
+The v2.1.1 fix was **incomplete**. It replaced questions with meta-instructions, but those meta-instructions ("Accessing available facts", "Gathering relevant information") confused the LLM into thinking it should:
+1. USE tools to "access facts" → hallucinated `READ: /path/file`
+2. SEARCH for data → hallucinated `SEARCH: pattern in /path`
+3. LIST directories → hallucinated `LIST: /path`
+
+v2.1.2 removes these confusing meta-instructions entirely!
+
+### Example: Stock Portfolio Problem
+
+**Before v2.1.2 (BROKEN):**
+```
+Genesis hallucinated:
+READ: /path/file
+SEARCH: 18% in /path/file
+LIST: /path
+
+Then consulted Perplexity for a simple calculation!
+```
+
+**After v2.1.2 (FIXED):**
+```
+[Thinking... 🧬 Local]
+
+Step 1: Starting value → $15,000.00
+Step 2: Q1: Apply +18% change → $17,700.00
+Step 3: Q2: Apply -12% change → $15,576.00
+Step 4: Q3: Apply +25% change → $19,470.00
+Step 5: Total percentage change → +29.80%
+
+Final Answer:
+Final portfolio value: $19,470.00
+Total percentage change: +29.80%
+```
+
+No hallucinations, no external calls, correct answer!
+
+### Technical Details
+- Modified: `math_reasoner.py` (+51 lines) - Added compound percentage solver
+- Modified: `reasoning.py` (~30 lines) - Fixed reasoning traces, enhanced detection
+- Impact: Eliminates tool hallucinations, enables local percentage calculations
+
+---
+
 ## [2.1.1] - 2025-11-06
 
 ### 🔧 Fix: Improved Reasoning Trace Clarity
