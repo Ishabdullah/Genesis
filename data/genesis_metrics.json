@@ -1017,6 +1017,66 @@
       "error": null,
       "source": "perplexity",
       "feedback": "correct"
+    },
+    {
+      "id": "q_1762448055609",
+      "timestamp": "2025-11-06T11:54:53.248927",
+      "user_input": "A pharmaceutical factory has 8 machines that can package 8,000 tablets",
+      "response_time_ms": 37639.16,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": null
+    },
+    {
+      "id": "q_1762448093252",
+      "timestamp": "2025-11-06T11:55:45.006641",
+      "user_input": "in 8 hours. The factory needs to package 50,000 tablets in 10 hours.",
+      "response_time_ms": 51754.03,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": null
+    },
+    {
+      "id": "q_1762448189840",
+      "timestamp": "2025-11-06T11:57:09.582567",
+      "user_input": "How many machines are required?#incorrect - did not answer the original question",
+      "response_time_ms": 39741.71,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": "incorrect"
+    },
+    {
+      "id": "q_1762448289666",
+      "timestamp": "2025-11-06T11:58:30.281242",
+      "user_input": "A pharmaceutical factory has 8 machines that can package 8,000 tablets",
+      "response_time_ms": 20615.01,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": null
+    },
+    {
+      "id": "q_1762448310284",
+      "timestamp": "2025-11-06T11:58:59.015273",
+      "user_input": "in 8 hours. The factory needs to package 50,000 tablets in 10 hours.",
+      "response_time_ms": 28730.53,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": null
     }
   ],
   "fallbacks": [
@@ -1036,13 +1096,13 @@
   "errors": [],
   "feedback": {
     "correct": 27,
-    "incorrect": 21
+    "incorrect": 22
   },
   "statistics": {
-    "total_queries": 89,
+    "total_queries": 94,
     "total_fallbacks": 2,
     "total_errors": 0,
-    "avg_response_time_ms": 37830.74
+    "avg_response_time_ms": 37717.2
   },
   "session_start": "2025-11-05T13:31:48.865827"
 }

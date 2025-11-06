@@ -1,0 +1,12 @@
+[
+  {
+    "timestamp": "2025-11-06T11:58:02.740024",
+    "query": "How many machines are required?#incorrect - did not answer the original question",
+    "response": "To determine the number of machines required to produce 50,000 tablets in 10 hours, we need to divide the total number of tablets by the number of tablets that each machine can produce in an hour.\n\n64...",
+    "is_correct": false,
+    "note": null,
+    "source": "local",
+    "event_type": "error_correction",
+    "priority": "high"
+  }
+]

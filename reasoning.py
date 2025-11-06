@@ -49,7 +49,7 @@ class ReasoningEngine:
         """Load reasoning patterns for different problem types"""
         return {
             "math_word_problem": {
-                "keywords": ["if", "how many", "how much", "calculate", "total", "rate", "per", "cost", "all but"],
+                "keywords": ["if", "how many", "how much", "calculate", "total", "rate", "per", "cost", "all but", "machines?.*package", "required", "needs? to"],
                 "steps": [
                     "Identify the given information",
                     "Determine what needs to be calculated",

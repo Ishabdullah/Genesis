@@ -1,0 +1,26 @@
+{
+  "websearch": {
+    "base_confidence": 0.7,
+    "bonus_time_sensitive": 0.15,
+    "success_count": 0,
+    "total_count": 0
+  },
+  "perplexity": {
+    "base_confidence": 0.75,
+    "bonus_synthesis": 0.1,
+    "success_count": 0,
+    "total_count": 0
+  },
+  "claude": {
+    "base_confidence": 0.85,
+    "bonus_coding": 0.2,
+    "success_count": 0,
+    "total_count": 0
+  },
+  "local": {
+    "base_confidence": 0.595,
+    "bonus_math": 0.3,
+    "success_count": 0,
+    "total_count": 1
+  }
+}

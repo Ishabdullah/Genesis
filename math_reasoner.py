@@ -310,8 +310,8 @@ class MathReasoner:
         # Look for pattern: X things do Y items in Z time
         rate_pattern = r'(\d+)\s+(machines?|cats?|workers?|people)'
         if re.search(rate_pattern, query_lower):
-            # Extract ALL numbers from query
-            numbers = [int(n) for n in re.findall(r'\b(\d+)\b', query)]
+            # Extract ALL numbers from query (handle commas in numbers like 8,000)
+            numbers = [int(n.replace(',', '')) for n in re.findall(r'\b(\d+(?:,\d+)*)\b', query)]
             if len(numbers) >= 5:
                 # Usually pattern is: N1 machines make N2 widgets in N3 minutes, how many for N4 widgets in N5 minutes?
                 # Or: N1 cats catch N2 mice in N3 minutes, how many cats for N4 mice in N5 minutes?
