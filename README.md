@@ -1,37 +1,52 @@
-# 🧬 Genesis - Local AI Workstation
+# 🧬 Super Genesis - Advanced AI Workstation
 
-A complete Claude-Code-like environment running entirely in Termux on Android.
+A complete Claude-Code-like environment running entirely in Termux on Android with multi-step reasoning, intelligent retry, and multi-source knowledge integration.
 
 ## Overview
 
-Genesis is a local AI assistant powered by CodeLlama-7B that runs on your Samsung S24 Ultra. It provides:
+**Super Genesis** is a local AI assistant powered by CodeLlama-7B that runs on your Samsung S24 Ultra. It provides:
 
+### 🌟 Super Genesis Features (NEW!)
+- **Multi-step reasoning**: Transparent step-by-step thinking process
+- **Pseudocode generation**: Algorithm design before implementation
+- **Retry functionality**: Natural "try again" commands
+- **Context-aware conversations**: Remember last 15 interactions for follow-ups
+- **Multi-source knowledge**: Local → Perplexity → Claude fallback chain
+- **Source tracking**: Complete transparency about answer origins
+- **Enhanced memory**: Source metadata and reasoning traces
+
+### 🔧 Core Features
 - **Code execution**: Write and run Python code safely
 - **File operations**: Read, write, edit, search files
 - **Shell integration**: Execute git, pip, grep, find commands
 - **Conversation memory**: Maintains context across interactions
-- **Performance monitoring**: Self-evaluating metrics and feedback
-- **Claude fallback**: Intelligent escalation when uncertain
+- **Performance monitoring**: Source-aware metrics and feedback
+- **Intelligent fallback**: Multi-source escalation chain
 - **Zero cloud dependency**: Everything runs locally (optional fallback)
 
 ## Architecture
 
 ```
 Genesis/
-├── genesis.py                # Main controller
+├── genesis.py                # Main controller with retry/context handling
+├── reasoning.py              # Multi-step reasoning engine (NEW)
+├── thinking_trace.py         # Live reasoning display (NEW)
 ├── memory.py                 # Conversation memory manager
-├── learning_memory.py        # Persistent learning & memory system
+├── learning_memory.py        # Persistent learning & memory with sources
 ├── executor.py               # Safe code execution
-├── tools.py                  # File system tools (read/write/edit/search)
+├── tools.py                  # File system + Perplexity integration
 ├── uncertainty_detector.py   # Confidence scoring
 ├── claude_fallback.py        # Intelligent fallback orchestration
-├── performance_monitor.py    # Self-evaluation metrics
+├── performance_monitor.py    # Source-aware metrics
 ├── genesis_bridge.py         # HTTP API bridge
 ├── llama.cpp/                # LLM inference engine
 ├── models/                   # LLM model storage
 ├── data/                     # Performance metrics & training data
-│   └── memory/               # Persistent memory storage
+│   └── memory/               # Persistent memory storage with sources
 ├── logs/                     # Fallback and error logs
+├── test_super_genesis.sh     # Super Genesis test suite (NEW)
+├── SUPER_GENESIS.md          # Complete feature documentation (NEW)
+├── REASONING_SYSTEM.md       # Reasoning system guide (NEW)
 └── memory.json               # Session conversation history
 ```
 
