@@ -711,31 +711,52 @@ Rules:
             return
 
         # NEW: Enhanced feedback system with notes (v1.8)
-        if user_input.lower().startswith("#correct") or user_input.lower().startswith("#incorrect"):
-            # Parse feedback and note (support both — and - separators)
-            parts = user_input.split("—", 1) if "—" in user_input else user_input.split(" - ", 1)
-            feedback_type = parts[0].strip().lower()
-            note = parts[1].strip() if len(parts) > 1 else None
+        # Check for feedback commands (must be at start of input)
+        user_input_lower = user_input.lower().strip()
 
-            is_correct = (feedback_type == "#correct")
+        # Handle #correct and #incorrect feedback commands
+        if user_input_lower == "#correct" or user_input_lower.startswith("#correct ") or user_input_lower.startswith("#correct-") or user_input_lower.startswith("#correct—"):
+            is_correct = True
+        elif user_input_lower == "#incorrect" or user_input_lower.startswith("#incorrect ") or user_input_lower.startswith("#incorrect-") or user_input_lower.startswith("#incorrect—"):
+            is_correct = False
+        else:
+            is_correct = None  # Not a feedback command
+
+        if is_correct is not None:
+            # This is a feedback command - process it
+
+            # Check if there's a previous response to mark
+            if not self.last_user_query or not self.last_response:
+                print(f"\n{Colors.YELLOW}⚠ No previous response to mark{Colors.RESET}")
+                print(f"{Colors.DIM}Please ask a question first, then use #correct or #incorrect{Colors.RESET}\n")
+                return
+
+            # Parse feedback and note (support —, " - ", and - separators)
+            if "—" in user_input:
+                parts = user_input.split("—", 1)
+            elif " - " in user_input:
+                parts = user_input.split(" - ", 1)
+            else:
+                # Try splitting on first - after the command
+                parts = user_input.split("-", 1)
+            note = parts[1].strip() if len(parts) > 1 else None
 
             # Record feedback in old system (performance monitor)
             feedback = self.performance.record_feedback(is_correct=is_correct, note=note)
 
             # Record feedback in new system (feedback manager)
-            if self.last_user_query and self.last_response:
-                self.feedback_manager.add_feedback(
-                    query=self.last_user_query,
-                    response=self.last_response,
-                    is_correct=is_correct,
-                    note=note,
-                    source=self.last_source,
-                    confidence=getattr(self, 'last_confidence', 0.0),
-                    metadata={"session_id": self.context_manager.session_metadata.get("session_id")}
-                )
+            self.feedback_manager.add_feedback(
+                query=self.last_user_query,
+                response=self.last_response,
+                is_correct=is_correct,
+                note=note,
+                source=self.last_source,
+                confidence=getattr(self, 'last_confidence', 0.0),
+                metadata={"session_id": self.context_manager.session_metadata.get("session_id")}
+            )
 
             # Store note in context
-            if self.last_user_query and note:
+            if note:
                 if self.context_stack:
                     self.context_stack[-1]['feedback_note'] = note
                 self.learning.add_feedback_note(self.last_user_query, note, is_correct)
@@ -753,7 +774,7 @@ Rules:
 
             if note:
                 print(f"{Colors.DIM}Feedback stored for adaptive learning.{Colors.RESET}\n")
-                if not is_correct and self.last_user_query:
+                if not is_correct:
                     print(f"{Colors.CYAN}💡 Tip: Type 'try again' to retry with corrections.{Colors.RESET}\n")
             else:
                 print(f"{Colors.DIM}Thank you for the feedback!{Colors.RESET}\n")
