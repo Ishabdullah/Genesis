@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform: Termux](https://img.shields.io/badge/Platform-Termux-green.svg)](https://termux.dev)
 [![Model: CodeLlama-7B](https://img.shields.io/badge/Model-CodeLlama--7B-orange.svg)](https://github.com/facebookresearch/codellama)
-[![Version: 2.1.1](https://img.shields.io/badge/Version-2.1.1-blue.svg)](CHANGELOG.md)
+[![Version: 2.2.0](https://img.shields.io/badge/Version-2.2.0-blue.svg)](CHANGELOG.md)
 [![Tests: Passing](https://img.shields.io/badge/Tests-Passing-brightgreen.svg)](tests/)
 [![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 
@@ -23,6 +23,7 @@
 - ✅ **Adaptive Learning**: Learns from feedback, adjusts confidence weights (v1.8)
 - ✅ **Tone Control**: Auto-detects and adapts response style (v1.8)
 - ✅ **Context Persistence**: Remembers conversations across restarts (v1.8)
+- ✅ **Device Integration**: Full access to Android sensors and hardware (v2.2)
 - ✅ **Intelligent Fallback**: WebSearch → Perplexity → Claude chain when uncertain
 - ✅ **Continuous Improvement**: Gets smarter with every interaction
 
@@ -43,6 +44,7 @@
 | **Adaptive Learning** | Feedback with notes, confidence weighting, continuous improvement | ✅ v1.8 |
 | **Tone Control** | Auto-detection, manual override, 4 tones × 3 verbosity levels | ✅ v1.8 |
 | **Context Persistence** | Session memory (20 items), long-term memory (1000 items), rehydration | ✅ v1.8 |
+| **Device Integration** | GPS, Camera, Audio, Flashlight, Brightness, Volume control | ✅ v2.2 |
 | **External Research** | WebSearch, Perplexity, Claude fallback, source tracking, direct control | ✅ Production |
 
 ---
@@ -355,6 +357,102 @@ Every response shows its source:
 - `☁️ Claude` - Claude fallback
 - `📊 Calculated` - Deterministic math engine
 - `🌐 WebSearch` - Multi-source live web search
+
+---
+
+## 📱 Device Integration & Hardware Access (v2.2)
+
+**Genesis v2.2** introduces **full device integration** - direct access to your Android device's sensors, hardware, and system APIs through Termux API.
+
+### Available Device Capabilities
+
+| Capability | Commands | Use Cases |
+|------------|----------|-----------|
+| 📍 **GPS Location** | `get_location` | "Where am I?", "What's nearby?", Location-based queries |
+| 🕐 **Date/Time** | `get_date_time` | "What time is it?", "What's the date?", Time-sensitive tasks |
+| 📸 **Camera** | `take_photo` | "Take a photo", "Take a selfie", Document capture |
+| 🎤 **Audio Recording** | `record_audio` | "Record 10 seconds", Voice memos, Sound capture |
+| 🔦 **Flashlight** | `toggle_flashlight` | "Turn on flashlight", "Turn off torch" |
+| ☀️ **Screen Brightness** | `adjust_brightness` | "Set brightness to 150", "Increase brightness" |
+| 🔊 **Volume Control** | `adjust_volume` | "Set volume to 10", "Mute music" |
+
+### Example Usage
+
+#### Get Current Location
+```
+Genesis> Where am I right now?
+
+[Executing Device Command: get_location]
+
+Genesis: You are currently at:
+  Latitude: 40.7128
+  Longitude: -74.0060
+  Location: New York, NY
+  Accuracy: ±5 meters
+```
+
+#### Take a Photo
+```
+Genesis> Take a photo with the back camera
+
+[Executing Device Command: take_photo]
+
+Genesis: Photo captured successfully!
+  File: data/media/photo_20251106_143022.jpg
+  Camera: back
+  Size: 2.4 MB
+```
+
+#### Control Flashlight
+```
+Genesis> Turn on the flashlight
+
+[Executing Device Command: toggle_flashlight]
+
+Genesis: Flashlight turned ON
+```
+
+#### Adjust Volume
+```
+Genesis> Set music volume to 12
+
+[Executing Device Command: adjust_volume]
+
+Genesis: Volume adjusted
+  Stream: music
+  Volume: 12/15 (80%)
+```
+
+### How It Works
+
+Genesis uses **Termux API** to access Android capabilities. Device commands are:
+
+1. **Detected** - Genesis identifies requests requiring device access
+2. **Generated** - Creates structured JSON command automatically
+3. **Executed** - Runs through secure Termux API layer
+4. **Verified** - Returns actual results from device
+5. **Integrated** - Uses real data in responses
+
+### Requirements
+
+Device features require **Termux API**:
+
+```bash
+# Install Termux API
+pkg install termux-api
+
+# Grant permissions in Android settings:
+# Settings → Apps → Termux:API → Permissions
+# Enable: Location, Camera, Microphone, Storage
+```
+
+### Privacy & Security
+
+- ✅ All device access happens **locally** on your device
+- ✅ No data transmitted to external servers
+- ✅ You control which permissions to grant
+- ✅ Commands only execute when **explicitly requested**
+- ✅ Full audit trail in Genesis logs
 
 ---
 

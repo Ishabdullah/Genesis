@@ -27,6 +27,7 @@ from websearch import get_websearch, WebSearch
 from feedback_manager import get_feedback_manager, FeedbackManager
 from tone_controller import get_tone_controller, ToneController, ResponseTone, VerbosityLevel
 from context_manager import get_context_manager, ContextManager
+from device_manager import get_device_manager, DeviceManager
 
 # ANSI color codes for terminal output
 class Colors:
@@ -78,6 +79,9 @@ class Genesis:
         # Context management (v1.8)
         self.context_manager = get_context_manager()
 
+        # Device capabilities (v2.2)
+        self.device_manager = get_device_manager()
+
         # Load context from previous session
         print(f"{Colors.DIM}[Context rehydrated from previous session]{Colors.RESET}")
 
@@ -92,13 +96,23 @@ class Genesis:
         self.question_counter = 0  # Counter for generating unique question IDs
 
         # Genesis identity and system prompt
-        self.identity = """I'm Genesis, a local AI assistant running entirely on your device using the CodeLlama-7B model. I can execute code, manage files, and help with development tasks - all while keeping your data private and working offline."""
+        self.identity = """I'm Genesis, a local AI assistant running entirely on your Android device using the CodeLlama-7B model. I have access to your device's sensors, hardware, and system APIs. I can execute code, manage files, access device capabilities, and help with development tasks - all while keeping your data private and working offline."""
 
-        # System prompt template optimized for CodeLlama-Instruct
-        self.system_prompt = """You are Genesis, a local AI assistant running on the user's device.
+        # System prompt template optimized for CodeLlama-Instruct with device capabilities
+        self.system_prompt = """You are Genesis, a local AI assistant running on the user's Android device with full device access.
 
 IDENTITY: When asked who you are or to identify yourself, respond:
-"I'm Genesis, a local AI assistant running entirely on your device using the CodeLlama-7B model."
+"I'm Genesis, a local AI assistant running entirely on your device using the CodeLlama-7B model with access to device capabilities."
+
+DEVICE CAPABILITIES:
+You have access to device sensors and hardware through JSON commands:
+- GPS/Location: Use DEVICE: {"action": "get_location"}
+- Date/Time: Use DEVICE: {"action": "get_date_time"}
+- Camera: Use DEVICE: {"action": "take_photo", "parameters": {"camera": "back"}}
+- Audio Recording: Use DEVICE: {"action": "record_audio", "parameters": {"duration": 10}}
+- Flashlight: Use DEVICE: {"action": "toggle_flashlight", "parameters": {"state": true}}
+- Brightness: Use DEVICE: {"action": "adjust_brightness", "parameters": {"brightness": 150}}
+- Volume: Use DEVICE: {"action": "adjust_volume", "parameters": {"stream": "music", "volume": 10}}
 
 For file/directory operations, use these commands:
 - LIST: /path/to/dir - list directory contents
@@ -106,10 +120,15 @@ For file/directory operations, use these commands:
 - WRITE: /path/to/file - write file (followed by content in code block)
 - SEARCH: pattern in /path - search for text in files
 
-IMPORTANT: Only use READ: to read files if explicitly asked. Do NOT read README.md unless user specifically requests it.
+IMPORTANT RULES:
+1. Always use device date/time for time-sensitive queries
+2. Use GPS location for weather, maps, or location-based queries
+3. Only execute device commands when explicitly requested by user
+4. Confirm destructive actions before executing
+5. Keep responses brief and action-focused
+6. Reference actual device data in your answers
 
-For shell commands (ls, pwd, cat, etc.), execute them directly.
-Keep responses brief and action-focused."""
+For shell commands (ls, pwd, cat, etc.), execute them directly."""
 
     def print_header(self):
         """Display Genesis header"""
@@ -162,6 +181,16 @@ Keep responses brief and action-focused."""
 {Colors.GREEN}search web: ...{Colors.RESET}      - Force WebSearch for query
 {Colors.GREEN}ask perplexity: ...{Colors.RESET}  - Force Perplexity for query
 {Colors.GREEN}ask claude: ...{Colors.RESET}      - Force Claude for query
+
+{Colors.BOLD}Device Capabilities (v2.2):{Colors.RESET}
+Genesis can access your device's hardware and sensors:
+  • GPS Location - "What's my current location?"
+  • Date/Time - "What time is it?" / "What's the date?"
+  • Camera - "Take a photo" / "Take a selfie"
+  • Audio Recording - "Record 10 seconds of audio"
+  • Flashlight - "Turn on the flashlight" / "Turn off the torch"
+  • Screen Brightness - "Set brightness to 150" / "Increase brightness"
+  • Volume Control - "Set music volume to 10" / "Increase volume"
 
 {Colors.BOLD}File Operations:{Colors.RESET}
 You can ask Genesis to read, write, list, or manipulate files.
@@ -592,6 +621,51 @@ Rules:
                 path = "."
             result = self.tools.grep_files(pattern, path=path)
             results.append(f"\n{Colors.CYAN}[Search Results]{Colors.RESET}\n{result}")
+
+        return "".join(results)
+
+    def process_device_commands(self, text: str) -> str:
+        """
+        Process device capability commands in LLM response
+
+        Args:
+            text: LLM response text
+
+        Returns:
+            Text with device command results appended
+        """
+        results = []
+
+        # Check for DEVICE commands with JSON
+        device_pattern = r'DEVICE:\s*(\{[^}]+\})'
+        for match in re.finditer(device_pattern, text):
+            json_str = match.group(1).strip()
+            try:
+                command = json.loads(json_str)
+                action = command.get("action")
+                parameters = command.get("parameters", {})
+
+                if not action:
+                    results.append(f"\n{Colors.RED}[Device Command Error]{Colors.RESET}\nNo action specified")
+                    continue
+
+                print(f"\n{Colors.CYAN}[Executing Device Command: {action}]{Colors.RESET}")
+
+                # Execute the device action
+                result = self.device_manager.execute_action(action, parameters)
+
+                # Format the result
+                if result.get("success"):
+                    result_text = json.dumps(result, indent=2)
+                    results.append(f"\n{Colors.GREEN}[Device Command Success]{Colors.RESET}\n{result_text}")
+                else:
+                    error = result.get("error", "Unknown error")
+                    results.append(f"\n{Colors.RED}[Device Command Failed]{Colors.RESET}\n{error}")
+
+            except json.JSONDecodeError as e:
+                results.append(f"\n{Colors.RED}[Device Command Error]{Colors.RESET}\nInvalid JSON: {str(e)}")
+            except Exception as e:
+                results.append(f"\n{Colors.RED}[Device Command Error]{Colors.RESET}\n{str(e)}")
 
         return "".join(results)
 
@@ -1113,6 +1187,11 @@ Rules:
         if tool_results:
             print(tool_results)
 
+        # Process device commands
+        device_results = self.process_device_commands(final_response)
+        if device_results:
+            print(device_results)
+
         # Execute code blocks
         code_results = self.process_code_execution(final_response)
         if code_results:
@@ -1122,6 +1201,8 @@ Rules:
         full_response = final_response
         if tool_results:
             full_response += "\n" + tool_results
+        if device_results:
+            full_response += "\n" + device_results
         if code_results:
             full_response += "\n" + code_results
 

@@ -5,6 +5,94 @@ All notable changes to Genesis will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2025-11-06
+
+### 🚀 Major: Device Integration & Hardware Access
+
+**Genesis can now access Android device capabilities through Termux API integration!**
+
+### Added
+
+#### Device Capabilities Manager (`device_manager.py`)
+- **Full device integration** through Termux API
+- **7 device capabilities**:
+  - 📍 GPS Location - `get_location()`
+  - 🕐 Date/Time - `get_date_time()`
+  - 📸 Camera - `take_photo(camera, filename)`
+  - 🎤 Audio Recording - `record_audio(duration, filename)`
+  - 🔦 Flashlight - `toggle_flashlight(state)`
+  - ☀️ Screen Brightness - `adjust_brightness(level)`
+  - 🔊 Volume Control - `adjust_volume(stream, volume, change)`
+- **Automatic permission checking**
+- **Secure command execution** through Termux API layer
+- **Media file management** in `data/media/` directory
+
+#### Genesis Integration
+- **Device command processor** - Detects and executes `DEVICE:` JSON commands
+- **Updated system prompt** with device capability instructions
+- **Automatic device data integration** in responses
+- **Help system updated** with device examples
+
+#### Documentation
+- **Comprehensive README section** on device capabilities
+- **Usage examples** for all device features
+- **Security & privacy information**
+- **Permission setup instructions**
+
+### Changed
+
+#### System Prompt
+- Updated identity to include device access capabilities
+- Added device command syntax documentation
+- Included best practices for device feature usage
+
+#### Help System
+- Added device capabilities section to `#help`
+- Included example commands for common device operations
+- Updated header to show device integration
+
+### Technical Details
+
+#### Device Command Format
+```python
+DEVICE: {"action": "get_location"}
+DEVICE: {"action": "take_photo", "parameters": {"camera": "back"}}
+```
+
+#### Supported Actions
+- `get_location` - GPS coordinates and accuracy
+- `get_date_time` - Current date, time, timezone
+- `take_photo` - Capture photos (front/back camera)
+- `record_audio` - Record audio with duration
+- `toggle_flashlight` - Control device torch
+- `adjust_brightness` - Set screen brightness (0-255)
+- `adjust_volume` - Control audio streams (music, ring, etc.)
+
+### Requirements
+
+- Termux API: `pkg install termux-api`
+- Android permissions for desired capabilities
+- Termux:API app installed from F-Droid or GitHub
+
+### Testing
+
+- Created `test_device_capabilities.sh` test suite
+- Tests all device capabilities
+- Validates Termux API availability
+- Checks permission status
+
+### Files Added
+- `device_manager.py` - Device capabilities manager (441 lines)
+- `test_device_capabilities.sh` - Device test suite
+- `FEEDBACK_FIX_SUMMARY.md` - Feedback commands fix documentation
+
+### Files Modified
+- `genesis.py` - Added device integration, fixed feedback commands
+- `README.md` - Added device capabilities section, updated version
+- `CHANGELOG.md` - This changelog
+
+---
+
 ## [2.1.1] - 2025-11-06
 
 ### 🔧 Fix: Improved Reasoning Trace Clarity
