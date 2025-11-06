@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform: Termux](https://img.shields.io/badge/Platform-Termux-green.svg)](https://termux.dev)
 [![Model: CodeLlama-7B](https://img.shields.io/badge/Model-CodeLlama--7B-orange.svg)](https://github.com/facebookresearch/codellama)
-[![Version: 1.8](https://img.shields.io/badge/Version-1.8-blue.svg)](CHANGELOG.md)
+[![Version: 2.1](https://img.shields.io/badge/Version-2.1-blue.svg)](CHANGELOG.md)
 [![Tests: Passing](https://img.shields.io/badge/Tests-Passing-brightgreen.svg)](tests/)
 [![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 
@@ -1592,20 +1592,34 @@ For issues, questions, or feature requests:
 - ✅ **Comprehensive evaluation** - Full system audit and optimization
 - ✅ **All 11/11 tests passing** - 100% test coverage on critical paths
 
-**v2.0** - November 5, 2025
+**v1.8** - November 6, 2025
+- ✅ **Smart Feedback & Adaptive Learning** - Learn from corrections
+- ✅ **Enhanced Feedback with Notes** - Detailed refinements and corrections
+- ✅ **Tone Detection & Control** - 4 tones × 3 verbosity levels
+- ✅ **Context Persistence** - Session + long-term memory across restarts
+- ✅ **Adaptive Source Confidence** - Weights adjust based on feedback
+- ✅ **User Preference Storage** - Settings persist across sessions
+- ✅ **Direct Source Control** - Force specific external sources
+- ✅ **Learning Event Storage** - Data for future model training
+
+**v1.7** - November 6, 2025
+- ✅ **Temporal Awareness** - Time-sensitive query detection
+- ✅ **Free Multi-Source WebSearch** - DuckDuckGo + Wikipedia + ArXiv
+- ✅ **Knowledge Cutoff Detection** - Routes to live data when needed
+- ✅ **Memory Staleness** - Flags outdated cached information
+- ✅ **Enhanced Fallback Chain** - 5-tier priority system
+- ✅ **Real-Time Clock Sync** - Device time integration
+
+**v1.5** - November 2025
 - ✅ Deterministic math engine (100% accuracy)
+- ✅ Multi-step reasoning with live traces
+- ✅ Retry functionality (5 patterns)
+- ✅ Context stack (15 interactions)
+- ✅ Perplexity integration
 - ✅ Feedback notes system (#correct/#incorrect — note)
 - ✅ Comprehensive debug logging (debug_log.json)
 - ✅ Context-aware reasoning templates (+ metacognitive)
-- ✅ Professional README with complete documentation
-- ✅ All 6/6 tests passing
-
-**v1.5** - November 2025
-- Multi-step reasoning with live traces
-- Retry functionality (5 patterns)
-- Context stack (15 interactions)
-- Perplexity integration
-- Source tracking
+- ✅ Source tracking
 
 **v1.0** - October 2025
 - Initial release
@@ -1617,7 +1631,7 @@ For issues, questions, or feature requests:
 ---
 
 **Version**: 2.1
-**Last Updated**: November 5, 2025
+**Last Updated**: November 6, 2025
 **Tested On**: Samsung S24 Ultra (Android 14), Termux 0.118
 **Model**: CodeLlama-7B-Instruct-Q4_K_M
 **Author**: Built with Claude Code
