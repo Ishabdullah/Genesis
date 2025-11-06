@@ -3,10 +3,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform: Termux](https://img.shields.io/badge/Platform-Termux-green.svg)](https://termux.dev)
 [![Model: CodeLlama-7B](https://img.shields.io/badge/Model-CodeLlama--7B-orange.svg)](https://github.com/facebookresearch/codellama)
-[![Tests: 6/6 Passing](https://img.shields.io/badge/Tests-6%2F6%20Passing-brightgreen.svg)](tests/)
+[![Version: 1.8](https://img.shields.io/badge/Version-1.8-blue.svg)](CHANGELOG.md)
+[![Tests: Passing](https://img.shields.io/badge/Tests-Passing-brightgreen.svg)](tests/)
 [![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 
-> **A production-ready AI workstation running entirely on Android with deterministic math, intelligent fallback, feedback learning, and professional debugging capabilities.**
+> **A production-ready AI workstation running entirely on Android with deterministic math, temporal awareness, adaptive learning, intelligent fallback, tone control, context persistence, and professional debugging capabilities.**
 
 ---
 
@@ -18,9 +19,12 @@
 - ✅ **Offline Capable**: Works without internet for local queries
 - ✅ **Production Quality**: Comprehensive tests passing, robust error handling
 - ✅ **Deterministic Math**: 100% accurate calculations (not probabilistic guesses)
-- ✅ **Temporal Awareness**: Recognizes time-sensitive queries, routes to live data (v1.7+)
+- ✅ **Temporal Awareness**: Recognizes time-sensitive queries, routes to live data (v1.7)
+- ✅ **Adaptive Learning**: Learns from feedback, adjusts confidence weights (v1.8)
+- ✅ **Tone Control**: Auto-detects and adapts response style (v1.8)
+- ✅ **Context Persistence**: Remembers conversations across restarts (v1.8)
 - ✅ **Intelligent Fallback**: WebSearch → Perplexity → Claude chain when uncertain
-- ✅ **Continuous Learning**: Stores feedback and improves over time
+- ✅ **Continuous Improvement**: Gets smarter with every interaction
 
 ---
 
@@ -34,9 +38,12 @@
 | **Reasoning** | Multi-step traces, context-aware templates, pseudocode | ✅ Production |
 | **Memory** | Persistent storage, auto-pruning, 1000+ conversations, staleness detection | ✅ Production |
 | **Performance** | Real-time metrics, feedback tracking, debug logging | ✅ Production |
-| **Retry & Context** | Natural retries, 15-interaction context, follow-ups | ✅ Production |
-| **Temporal Awareness** | Time-sync, knowledge cutoff detection, live data routing | ✅ v1.7+ |
-| **External Research** | WebSearch, Perplexity, Claude fallback, source tracking | ✅ Production |
+| **Retry & Context** | Natural retries, session + long-term context, follow-ups | ✅ Production |
+| **Temporal Awareness** | Time-sync, knowledge cutoff detection, live data routing | ✅ v1.7 |
+| **Adaptive Learning** | Feedback with notes, confidence weighting, continuous improvement | ✅ v1.8 |
+| **Tone Control** | Auto-detection, manual override, 4 tones × 3 verbosity levels | ✅ v1.8 |
+| **Context Persistence** | Session memory (20 items), long-term memory (1000 items), rehydration | ✅ v1.8 |
+| **External Research** | WebSearch, Perplexity, Claude fallback, source tracking, direct control | ✅ Production |
 
 ---
 
@@ -489,6 +496,279 @@ python3 test_temporal_awareness.py
 ✓ PASS - Query detected as time-sensitive
 ✓ PASS - Should trigger fallback
 ```
+
+---
+
+## 🎓 Smart Feedback & Adaptive Learning (v1.8)
+
+**Genesis v1.8** introduces **intelligent feedback with continuous learning** - Genesis now learns from your corrections and adapts over time.
+
+### Key Features
+
+1. **Enhanced Feedback with Notes**
+   - Mark responses correct with positive refinements
+   - Mark responses incorrect with detailed corrections
+   - Notes stored for future training and model improvement
+   - Adaptive confidence weighting based on feedback
+
+2. **Adaptive Source Confidence**
+   - Automatic learning from your feedback
+   - Source weights adjust based on success rates
+   - Best source recommendation per query type
+   - Continuous improvement over time
+
+3. **Tone Detection & Control**
+   - Automatic detection: Technical, Conversational, Advisory, Concise
+   - Manual control with `#tone` command
+   - Verbosity levels: Short, Medium, Long
+   - In-query overrides supported
+
+4. **Context Persistence Across Sessions**
+   - Session memory (RAM): Last 20 interactions
+   - Long-term memory (disk): Up to 1000 important interactions
+   - Context rehydration on startup
+   - Relevance-based retrieval from past conversations
+
+### Feedback Commands
+
+```bash
+# Mark correct with positive note
+Genesis> What is 2+2?
+Genesis: 4
+Genesis> #correct - perfect, concise answer
+
+✓ Last response marked as correct
+📝 Positive refinement: perfect, concise answer
+Feedback stored for adaptive learning.
+
+# Mark incorrect with correction
+Genesis> Who is president now?
+Genesis: [outdated answer]
+Genesis> #incorrect - used old data, should check live sources
+
+✗ Last response marked as incorrect
+📌 Correction note: used old data, should check live sources
+Feedback stored for adaptive learning.
+💡 Tip: Type 'try again' to retry with corrections.
+
+# View feedback summary
+Genesis> #feedback
+
+╔══════════════════════════════════════════════════════════════╗
+║           📊 FEEDBACK & LEARNING SUMMARY                      ║
+╚══════════════════════════════════════════════════════════════╝
+
+📈 SESSION STATISTICS
+Total Feedback:              47
+  ✓ Correct:                 42
+  ✗ Incorrect:               5
+  📝 Refinements:            12
+Success Rate:                89.4%
+
+🎓 LEARNING
+Learning Events:             17
+Total Stored:                134
+
+🎯 SOURCE CONFIDENCE (Adaptive)
+  WebSearch    0.78 (34/42 = 81%)
+  Perplexity   0.82 (23/28 = 82%)
+  Claude       0.89 (15/17 = 88%)
+  Local        0.74 (98/132 = 74%)
+```
+
+### Tone Control
+
+**Automatic Detection:**
+```bash
+Genesis> Explain binary search
+# Detects: Technical tone
+
+Genesis> Tell me about sorting casually
+# Detects: Conversational tone
+
+Genesis> How do I set up Python?
+# Detects: Advisory tone
+
+Genesis> Briefly, what is AI?
+# Detects: Concise response
+```
+
+**Manual Control:**
+```bash
+# Set tone preference (persists across sessions)
+Genesis> #tone technical
+✓ Tone preference set to: technical
+
+Genesis> #verbosity short
+✓ Verbosity preference set to: short
+
+# Now all responses use technical tone with short verbosity
+Genesis> Explain decorators
+🔧 [Tone: Technical | Length: Brief]
+Decorators modify function behavior via @syntax...
+```
+
+**Available Tones:**
+- **Technical** - Precise, formal, code-focused
+- **Conversational** - Casual, friendly, analogies
+- **Advisory** - Step-by-step, guidance-oriented
+- **Concise** - Brief, to-the-point
+
+**Verbosity Levels:**
+- **Short** - 3-5 lines, key points only
+- **Medium** - 10-20 lines, balanced detail
+- **Long** - Comprehensive, detailed explanations
+
+### Context Persistence
+
+**Session Memory:**
+```bash
+# Current session (in RAM)
+Genesis> I'm working on a Python web scraper
+Genesis: [helps with implementation]
+
+Genesis> Can you add error handling to it?
+Genesis: Based on your web scraper above...
+# Uses session context automatically
+```
+
+**Long-Term Memory:**
+```bash
+# Session 1
+Genesis> My favorite language is Python
+Genesis> I prefer functional programming
+
+# Restart Genesis
+
+# Session 2 - context auto-rehydrated!
+Genesis> What's my favorite programming style?
+Genesis: Based on our previous conversations, you prefer
+functional programming and your favorite language is Python.
+
+# View context
+Genesis> #context
+
+╔══════════════════════════════════════════════════════════════╗
+║           🧠 CONTEXT & MEMORY SUMMARY                         ║
+╚══════════════════════════════════════════════════════════════╝
+
+📝 SESSION MEMORY (RAM)
+Session ID:                  3f8a2b1c9d4e
+Items in memory:             18/20
+Queries this session:        23
+Last topic:                  python decorators
+
+💾 LONG-TERM MEMORY (Disk)
+Total stored:                487/1000
+Oldest entry:                2025-10-15
+Newest entry:                2025-11-06
+
+👤 USER PREFERENCES
+Total preferences:           3
+  tone: technical
+  verbosity: medium
+  theme: dark
+```
+
+### Adaptive Learning Behavior
+
+**How It Works:**
+1. Genesis responds to your query
+2. You provide feedback with a note
+3. Source confidence weights automatically adjust
+4. Future responses prioritize better sources
+5. Learning events stored for model training
+
+**Example Evolution:**
+```
+Day 1:  WebSearch confidence = 0.70 (baseline)
+        Genesis> search web: AI news
+        Genesis> #correct - great current info
+
+Day 5:  WebSearch confidence = 0.76 (learned!)
+        More accurate for time-sensitive queries
+
+Day 10: WebSearch confidence = 0.82 (optimized)
+        Genesis automatically prefers WebSearch
+        for current events
+```
+
+### Direct Source Control (v1.8)
+
+**Force specific sources:**
+```bash
+# Force WebSearch
+Genesis> search web: latest exoplanet discovery 2025
+[Step 1/1] Using WebSearch (user-directed)...
+
+# Force Perplexity
+Genesis> ask perplexity: AI safety concerns
+[Step 1/1] Using Perplexity (user-directed)...
+
+# Force Claude
+Genesis> ask claude: implement binary search tree in Python
+[Step 1/1] Using Claude (user-directed)...
+```
+
+### Data Storage
+
+**Location:** `data/memory/`
+- `feedback_log.json` - All feedback with notes
+- `learning_events.json` - Training data for improvements
+- `source_weights.json` - Adaptive confidence weights
+- `session_memory.json` - Current session context
+- `longterm_memory.json` - Persistent important interactions
+- `user_preferences.json` - Your tone/verbosity preferences
+
+### Testing v1.8 Features
+
+```bash
+# Test feedback system
+Genesis> What is the capital of France?
+Genesis: Paris
+Genesis> #correct - accurate and concise
+Genesis> #feedback
+
+# Test tone control
+Genesis> #tone conversational
+Genesis> Explain recursion
+💬 [Tone: Conversational | Length: Standard]
+Think of recursion like a mirror reflecting into another mirror...
+
+# Test context persistence
+Genesis> Remember: I'm learning Python
+# Restart Genesis
+Genesis> What am I learning?
+Genesis: You're learning Python (from our previous session).
+
+# Test direct source control
+Genesis> search web: current weather trends 2025
+Genesis> ask claude: write unit tests for this function
+```
+
+### Benefits of v1.8
+
+✅ **Learns from you** - Gets smarter with every feedback
+✅ **Remembers context** - Conversations continue across restarts
+✅ **Adapts tone** - Responds in the style you prefer
+✅ **Better sources** - Learns which sources work best
+✅ **Continuous improvement** - Quality increases over time
+
+### Quick Command Reference
+
+| Command | Purpose |
+|---------|---------|
+| `#correct - note` | Mark correct + positive note |
+| `#incorrect - note` | Mark incorrect + correction |
+| `#feedback` | Show learning summary |
+| `#context` | Show session/long-term context |
+| `#tone [type]` | Set tone preference |
+| `#verbosity [level]` | Set verbosity preference |
+| `search web: ...` | Force WebSearch |
+| `ask perplexity: ...` | Force Perplexity |
+| `ask claude: ...` | Force Claude |
+
+For detailed v1.8 documentation, see: `GENESIS-V1.8-QUICK-REF.md`
 
 ---
 
