@@ -252,23 +252,16 @@ Example: "Write a script to calculate fibonacci numbers"
             # Build context from recent conversation history
             context = self.memory.get_context_string()
 
-            # Add instruction about using tools
-            tool_instructions = """You are Genesis. Be direct, concise, and focused.
-
-Available tools:
-- LIST: /path - list directory
-- READ: /path/file - read file
-- SEARCH: pattern in /path - search content
-- Python code in ```python blocks
+            # Add instruction for focused responses (no tool hints in output)
+            tool_instructions = """You are Genesis, a helpful AI assistant. Answer the user's question directly and concisely.
 
 Rules:
 1. Answer the user's CURRENT question only
-2. Do NOT repeat previous conversations or examples
-3. Be brief and action-oriented
-4. Use tools when appropriate for the task
-5. For math: calculate and give answer only
-6. For string operations: perform and show result only
-7. For code: write clean, working code without extra commentary
+2. Be brief and action-oriented
+3. For math problems: state the final answer clearly
+4. For code: write clean, working code
+5. Do NOT include file paths, tool commands, or placeholder text
+6. Do NOT generate example Q&A pairs
 """
 
             # Use CodeLlama-Instruct format with minimal context
@@ -280,14 +273,14 @@ Rules:
             else:
                 full_prompt = f"[INST] {tool_instructions}\n\nQuestion: {user_prompt} [/INST]"
 
-            # Call llama.cpp with balanced parameters
+            # Call llama.cpp with balanced parameters and stop tokens
             cmd = [
                 self.llama_path,
                 "-m", self.model_path,
                 "-p", full_prompt,
-                "-n", "250",  # Increased to avoid mid-sentence cuts
+                "-n", "150",  # Reduced to prevent rambling
                 "-t", "8",    # All cores
-                "--temp", "0.5",  # Slightly higher for more natural text
+                "--temp", "0.3",  # Lower temperature for more focused output
                 "--top-p", "0.9",
                 "--top-k", "40",
                 "-c", "1024",  # Increased context window
@@ -296,7 +289,14 @@ Rules:
                 "--mirostat", "2",  # Mirostat for quality
                 "--mirostat-lr", "0.1",
                 "--mirostat-ent", "5.0",
-                "--repeat-penalty", "1.1"  # Prevent repetition
+                "--repeat-penalty", "1.1",  # Prevent repetition
+                "--stop", "Q1:",  # Stop if model starts generating Q&A
+                "--stop", "Q2:",
+                "--stop", "LIST:",  # Stop if model outputs tool commands
+                "--stop", "READ:",
+                "--stop", "SEARCH:",
+                "--stop", "[File",  # Stop if model tries to show file operations
+                "--stop", "[Directory"
             ]
 
             result = subprocess.run(
@@ -891,30 +891,49 @@ Rules:
             pseudocode = self.reasoning.generate_pseudocode(user_input)
             self.thinking_trace.display_pseudocode(pseudocode)
 
-        try:
-            response = self.call_llm(user_input)
-        except Exception as e:
-            # Record error
-            self.performance.record_error("llm_error", str(e), user_input)
-            raise
+        # Check if math reasoner already calculated the answer
+        calculated_answer = self.reasoning.get_calculated_answer()
+        used_calculated_answer = False
+
+        if calculated_answer:
+            # We have a deterministic math answer - skip LLM call
+            response = f"{calculated_answer}"
+            response_source = "local_calculated"
+            used_calculated_answer = True
+        else:
+            # Need LLM for non-math or unsolved problems
+            response_source = "local"
+            try:
+                response = self.call_llm(user_input)
+            except Exception as e:
+                # Record error
+                self.performance.record_error("llm_error", str(e), user_input)
+                raise
 
         # Check for uncertainty and trigger fallback if needed
-        should_fallback, uncertainty_analysis = self.uncertainty.should_trigger_fallback(response)
+        # Skip uncertainty check if we used calculated answer (it's deterministic)
+        if used_calculated_answer:
+            should_fallback = False
+            uncertainty_analysis = {"confidence_score": 1.0}
+        else:
+            should_fallback, uncertainty_analysis = self.uncertainty.should_trigger_fallback(response)
 
-        # Also trigger fallback if temporal uncertainty detected
-        if temporal_analysis.get("should_trigger_fallback"):
-            should_fallback = True
-            # Lower confidence for temporal queries
-            if "confidence_score" in uncertainty_analysis:
-                uncertainty_analysis["confidence_score"] = min(
-                    uncertainty_analysis["confidence_score"],
-                    0.5  # Cap at 0.5 for temporal queries
-                )
+            # Also trigger fallback if temporal uncertainty detected
+            if temporal_analysis.get("should_trigger_fallback"):
+                should_fallback = True
+                # Lower confidence for temporal queries
+                if "confidence_score" in uncertainty_analysis:
+                    uncertainty_analysis["confidence_score"] = min(
+                        uncertainty_analysis["confidence_score"],
+                        0.5  # Cap at 0.5 for temporal queries
+                    )
 
         websearch_response = None
         perplexity_response = None
         claude_response = None
-        response_source = "local"
+        # Don't overwrite response_source if already set (e.g., "local_calculated")
+        if not used_calculated_answer:
+            response_source = "local"
 
         # NEW LAYERED FALLBACK CHAIN: WebSearch → Perplexity → Claude
         if should_fallback:
@@ -1043,16 +1062,9 @@ Rules:
                 )
 
         # Validate reasoning before displaying final answer
-        # Priority: Calculated Math Answer > WebSearch > Perplexity > Claude > Local LLM
+        # Priority: WebSearch > Perplexity > Claude > Local LLM (calculated answer already integrated above)
 
-        # Check if we have a calculated answer from math reasoner
-        calculated_answer = self.reasoning.get_calculated_answer()
-
-        if calculated_answer:
-            # Use the calculated answer (it's deterministic and correct)
-            final_response = calculated_answer
-            response_source = "local_calculated"
-        elif websearch_response:
+        if websearch_response:
             final_response = websearch_response
         elif perplexity_response:
             final_response = perplexity_response
