@@ -24,6 +24,9 @@ from thinking_trace import ThinkingTrace
 from debug_logger import DebugLogger
 from time_sync import get_time_sync, TimeSync
 from websearch import get_websearch, WebSearch
+from feedback_manager import get_feedback_manager, FeedbackManager
+from tone_controller import get_tone_controller, ToneController, ResponseTone, VerbosityLevel
+from context_manager import get_context_manager, ContextManager
 
 # ANSI color codes for terminal output
 class Colors:
@@ -66,6 +69,18 @@ class Genesis:
         # Web search
         self.websearch = get_websearch()
 
+        # Enhanced feedback and learning (v1.8)
+        self.feedback_manager = get_feedback_manager()
+
+        # Tone control (v1.8)
+        self.tone_controller = get_tone_controller()
+
+        # Context management (v1.8)
+        self.context_manager = get_context_manager()
+
+        # Load context from previous session
+        print(f"{Colors.DIM}[Context rehydrated from previous session]{Colors.RESET}")
+
         # Retry and context handling
         self.last_user_query = None
         self.last_query_id = None  # Track the ID of the last query for retry
@@ -106,7 +121,7 @@ Keep responses brief and action-focused."""
         print("Powered by CodeLlama-7B running on Samsung S24 Ultra")
         print(f"{assist_color}Claude Assist: {assist_status}{Colors.RESET}{Colors.CYAN}")
         print(f"{'=' * 60}{Colors.RESET}\n")
-        print(f"{Colors.DIM}Commands: #exit | #help | #assist | #performance | #memory{Colors.RESET}\n")
+        print(f"{Colors.DIM}Commands: #exit | #help | #assist | #performance | #memory | #feedback | #context{Colors.RESET}\n")
 
     def print_help(self):
         """Display help information"""
@@ -132,6 +147,21 @@ Keep responses brief and action-focused."""
 {Colors.GREEN}#memory{Colors.RESET}        - Show persistent memory summary
 {Colors.GREEN}#prune_memory{Colors.RESET}  - Manually trigger memory pruning
 {Colors.GREEN}#export_memory{Colors.RESET} - Export memory backup
+
+{Colors.BOLD}Enhanced Feedback (v1.8):{Colors.RESET}
+{Colors.GREEN}#correct - note{Colors.RESET}      - Mark correct with positive note
+{Colors.GREEN}#incorrect - note{Colors.RESET}    - Mark incorrect with correction note
+{Colors.GREEN}#feedback{Colors.RESET}            - Show feedback & learning summary
+
+{Colors.BOLD}Context & Tone (v1.8):{Colors.RESET}
+{Colors.GREEN}#context{Colors.RESET}             - Show session and long-term context
+{Colors.GREEN}#tone [type]{Colors.RESET}         - Set response tone (technical/conversational/advisory/concise)
+{Colors.GREEN}#verbosity [level]{Colors.RESET}   - Set response length (short/medium/long)
+
+{Colors.BOLD}Direct Source Control (v1.8):{Colors.RESET}
+{Colors.GREEN}search web: ...{Colors.RESET}      - Force WebSearch for query
+{Colors.GREEN}ask perplexity: ...{Colors.RESET}  - Force Perplexity for query
+{Colors.GREEN}ask claude: ...{Colors.RESET}      - Force Claude for query
 
 {Colors.BOLD}File Operations:{Colors.RESET}
 You can ask Genesis to read, write, list, or manipulate files.
@@ -680,43 +710,86 @@ Rules:
             print(self.performance.get_performance_summary())
             return
 
-        # Handle feedback with optional notes (e.g., "#correct — good work" or "#incorrect — wrong calculation")
+        # NEW: Enhanced feedback system with notes (v1.8)
         if user_input.lower().startswith("#correct") or user_input.lower().startswith("#incorrect"):
-            # Parse feedback and note
-            parts = user_input.split("—", 1)
+            # Parse feedback and note (support both — and - separators)
+            parts = user_input.split("—", 1) if "—" in user_input else user_input.split(" - ", 1)
             feedback_type = parts[0].strip().lower()
             note = parts[1].strip() if len(parts) > 1 else None
 
             is_correct = (feedback_type == "#correct")
 
-            # Record feedback with note
+            # Record feedback in old system (performance monitor)
             feedback = self.performance.record_feedback(is_correct=is_correct, note=note)
 
-            # Store note in last query metadata if available
+            # Record feedback in new system (feedback manager)
+            if self.last_user_query and self.last_response:
+                self.feedback_manager.add_feedback(
+                    query=self.last_user_query,
+                    response=self.last_response,
+                    is_correct=is_correct,
+                    note=note,
+                    source=self.last_source,
+                    confidence=getattr(self, 'last_confidence', 0.0),
+                    metadata={"session_id": self.context_manager.session_metadata.get("session_id")}
+                )
+
+            # Store note in context
             if self.last_user_query and note:
-                # Add note to context stack entry
                 if self.context_stack:
                     self.context_stack[-1]['feedback_note'] = note
-
-                # Add note to learning memory
                 self.learning.add_feedback_note(self.last_user_query, note, is_correct)
 
             # Display confirmation
+            feedback_icon = "📝" if note and is_correct else "📌"
             if is_correct:
                 print(f"\n{Colors.GREEN}✓ Last response marked as correct{Colors.RESET}")
+                if note:
+                    print(f"{Colors.CYAN}{feedback_icon} Positive refinement: {note}{Colors.RESET}")
             else:
                 print(f"\n{Colors.RED}✗ Last response marked as incorrect{Colors.RESET}")
+                if note:
+                    print(f"{Colors.YELLOW}{feedback_icon} Correction note: {note}{Colors.RESET}")
 
             if note:
-                print(f"{Colors.YELLOW}📝 Note: {note}{Colors.RESET}")
-                print(f"{Colors.DIM}Feedback and note stored for future learning.{Colors.RESET}\n")
-
-                # If marked incorrect with a note, offer to retry
+                print(f"{Colors.DIM}Feedback stored for adaptive learning.{Colors.RESET}\n")
                 if not is_correct and self.last_user_query:
-                    print(f"{Colors.CYAN}💡 Tip: Type 'try again' to retry with corrections, or ask a clarifying question.{Colors.RESET}\n")
+                    print(f"{Colors.CYAN}💡 Tip: Type 'try again' to retry with corrections.{Colors.RESET}\n")
             else:
                 print(f"{Colors.DIM}Thank you for the feedback!{Colors.RESET}\n")
 
+            return
+
+        # NEW: Show feedback summary (v1.8)
+        if user_input.lower() == "#feedback":
+            print(self.feedback_manager.get_feedback_summary())
+            return
+
+        # NEW: Show context summary (v1.8)
+        if user_input.lower() == "#context":
+            print(self.context_manager.get_summary())
+            return
+
+        # NEW: Set tone preference (v1.8)
+        if user_input.lower().startswith("#tone"):
+            parts = user_input.split(maxsplit=1)
+            if len(parts) > 1:
+                tone_name = parts[1].strip().lower()
+                self.context_manager.set_preference("tone", tone_name)
+                print(f"\n{Colors.CYAN}✓ Tone preference set to: {tone_name}{Colors.RESET}\n")
+            else:
+                print(f"\n{Colors.YELLOW}Available tones: technical, conversational, advisory, concise{Colors.RESET}\n")
+            return
+
+        # NEW: Set verbosity preference (v1.8)
+        if user_input.lower().startswith("#verbosity"):
+            parts = user_input.split(maxsplit=1)
+            if len(parts) > 1:
+                verbosity_name = parts[1].strip().lower()
+                self.context_manager.set_preference("verbosity", verbosity_name)
+                print(f"\n{Colors.CYAN}✓ Verbosity preference set to: {verbosity_name}{Colors.RESET}\n")
+            else:
+                print(f"\n{Colors.YELLOW}Available levels: short, medium, long{Colors.RESET}\n")
             return
 
         if user_input.lower() == "#reset_metrics":

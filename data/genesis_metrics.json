@@ -933,6 +933,90 @@
       "error": null,
       "source": "local",
       "feedback": "incorrect"
+    },
+    {
+      "id": "q_1762438450552",
+      "timestamp": "2025-11-06T09:14:48.068241",
+      "user_input": "whats todays date and time currently",
+      "response_time_ms": 37516.38,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": "incorrect"
+    },
+    {
+      "id": "q_1762438566963",
+      "timestamp": "2025-11-06T09:16:31.072884",
+      "user_input": "What is todays date",
+      "response_time_ms": 24109.6,
+      "was_direct_command": false,
+      "had_fallback": true,
+      "confidence_score": 0.5,
+      "error": null,
+      "source": "perplexity",
+      "feedback": "incorrect"
+    },
+    {
+      "id": "q_1762438715158",
+      "timestamp": "2025-11-06T09:19:09.049242",
+      "user_input": "who is the current president of the united states",
+      "response_time_ms": 33890.38,
+      "was_direct_command": false,
+      "had_fallback": true,
+      "confidence_score": 0.5,
+      "error": null,
+      "source": "perplexity",
+      "feedback": "correct"
+    },
+    {
+      "id": "q_1762438827787",
+      "timestamp": "2025-11-06T09:21:48.961501",
+      "user_input": "What are some new ethical debates surrounding generative AI in 2025?",
+      "response_time_ms": 81174.09,
+      "was_direct_command": false,
+      "had_fallback": true,
+      "confidence_score": 0.5,
+      "error": null,
+      "source": "perplexity",
+      "feedback": "correct"
+    },
+    {
+      "id": "q_1762438979316",
+      "timestamp": "2025-11-06T09:24:11.015686",
+      "user_input": "What\u2019s the newest open-source large language model released after Llama 3?",
+      "response_time_ms": 71699.54,
+      "was_direct_command": false,
+      "had_fallback": true,
+      "confidence_score": 0.5,
+      "error": null,
+      "source": "perplexity",
+      "feedback": "correct"
+    },
+    {
+      "id": "q_1762439232634",
+      "timestamp": "2025-11-06T09:28:20.999873",
+      "user_input": "What are the latest SpaceX launch missions planned for November 2025?",
+      "response_time_ms": 68364.98,
+      "was_direct_command": false,
+      "had_fallback": true,
+      "confidence_score": 0.5,
+      "error": null,
+      "source": "websearch",
+      "feedback": "correct"
+    },
+    {
+      "id": "q_1762439373968",
+      "timestamp": "2025-11-06T09:30:03.168783",
+      "user_input": "Who just won the 2025 World Series, and what was the final score?",
+      "response_time_ms": 29199.91,
+      "was_direct_command": false,
+      "had_fallback": true,
+      "confidence_score": 0.5,
+      "error": null,
+      "source": "perplexity",
+      "feedback": "correct"
     }
   ],
   "fallbacks": [
@@ -951,14 +1035,14 @@
   ],
   "errors": [],
   "feedback": {
-    "correct": 22,
-    "incorrect": 19
+    "correct": 27,
+    "incorrect": 21
   },
   "statistics": {
-    "total_queries": 82,
+    "total_queries": 89,
     "total_fallbacks": 2,
     "total_errors": 0,
-    "avg_response_time_ms": 36841.23
+    "avg_response_time_ms": 37830.74
   },
   "session_start": "2025-11-05T13:31:48.865827"
 }

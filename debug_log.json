@@ -1,0 +1,50 @@
+{
+  "session_start": "2025-11-06T09:15:56.378537",
+  "entries": [
+    {
+      "timestamp": "2025-11-06T09:16:30.948134",
+      "type": "fallback_attempt",
+      "query": "What is todays date",
+      "local_confidence": 0.5,
+      "source": "perplexity",
+      "success": true,
+      "error": null
+    },
+    {
+      "timestamp": "2025-11-06T09:19:08.937803",
+      "type": "fallback_attempt",
+      "query": "who is the current president of the united states",
+      "local_confidence": 0.5,
+      "source": "perplexity",
+      "success": true,
+      "error": null
+    },
+    {
+      "timestamp": "2025-11-06T09:21:48.839921",
+      "type": "fallback_attempt",
+      "query": "What are some new ethical debates surrounding generative AI in 2025?",
+      "local_confidence": 0.5,
+      "source": "perplexity",
+      "success": true,
+      "error": null
+    },
+    {
+      "timestamp": "2025-11-06T09:24:10.874013",
+      "type": "fallback_attempt",
+      "query": "What\u2019s the newest open-source large language model released after Llama 3?",
+      "local_confidence": 0.5,
+      "source": "perplexity",
+      "success": true,
+      "error": null
+    },
+    {
+      "timestamp": "2025-11-06T09:30:03.035502",
+      "type": "fallback_attempt",
+      "query": "Who just won the 2025 World Series, and what was the final score?",
+      "local_confidence": 0.5,
+      "source": "perplexity",
+      "success": true,
+      "error": null
+    }
+  ]
+}
