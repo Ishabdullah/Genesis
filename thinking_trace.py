@@ -37,9 +37,22 @@ class ThinkingTrace:
             "dim": "\033[2m"
         }
 
-    def display_thinking_header(self):
-        """Display the thinking section header"""
-        print(f"\n{self.colors['cyan']}{self.colors['bold']}[Thinking...]{self.colors['reset']}")
+    def display_thinking_header(self, source: Optional[str] = None):
+        """Display the thinking section header with optional source
+
+        Args:
+            source: Source of reasoning ("local", "perplexity", "claude")
+        """
+        header = "[Thinking...]"
+        if source:
+            source_labels = {
+                "local": "🧬 Local",
+                "perplexity": "🔍 Consulting Perplexity",
+                "claude": "☁️ Consulting Claude"
+            }
+            header = f"[Thinking... {source_labels.get(source, source)}]"
+
+        print(f"\n{self.colors['cyan']}{self.colors['bold']}{header}{self.colors['reset']}")
         print(f"{self.colors['dim']}{'─' * 60}{self.colors['reset']}")
         if self.show_live:
             time.sleep(0.1)
@@ -68,15 +81,16 @@ class ThinkingTrace:
             sys.stdout.flush()
             time.sleep(self.delay)
 
-    def display_steps(self, steps: List[ReasoningStep], show_details: bool = True):
+    def display_steps(self, steps: List[ReasoningStep], show_details: bool = True, source: Optional[str] = None):
         """
         Display all reasoning steps
 
         Args:
             steps: List of reasoning steps
             show_details: Whether to show calculations and results
+            source: Source of reasoning ("local", "perplexity", "claude")
         """
-        self.display_thinking_header()
+        self.display_thinking_header(source)
 
         for step in steps:
             self.display_step(step, show_details)

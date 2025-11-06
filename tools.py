@@ -6,8 +6,9 @@ File system operations and utility commands
 
 import os
 import shutil
+import subprocess
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 class GenesisTools:
     """Provides file system and utility tools for Genesis"""
@@ -390,3 +391,47 @@ class GenesisTools:
 
         except Exception as e:
             return f"⚠ Error searching: {e}"
+
+    @staticmethod
+    def ask_perplexity(query: str, timeout: int = 30) -> Tuple[bool, str]:
+        """
+        Consult Perplexity CLI for research queries
+
+        Args:
+            query: Question to ask Perplexity
+            timeout: Command timeout in seconds
+
+        Returns:
+            Tuple of (success: bool, response: str)
+        """
+        try:
+            # Check if perplexity CLI is available
+            check = subprocess.run(
+                ["which", "perplexity"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+
+            if check.returncode != 0:
+                return False, "Perplexity CLI not installed"
+
+            # Call Perplexity with the query (standard CLI format)
+            result = subprocess.run(
+                ["perplexity", query],
+                capture_output=True,
+                text=True,
+                timeout=timeout
+            )
+
+            if result.returncode == 0:
+                return True, result.stdout.strip()
+            else:
+                return False, f"Perplexity error: {result.stderr.strip()}"
+
+        except subprocess.TimeoutExpired:
+            return False, "Perplexity request timed out"
+        except FileNotFoundError:
+            return False, "Perplexity CLI not found"
+        except Exception as e:
+            return False, f"Error calling Perplexity: {str(e)}"

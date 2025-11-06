@@ -100,7 +100,8 @@ class PerformanceMonitor:
         was_direct_command: bool = False,
         had_fallback: bool = False,
         confidence_score: Optional[float] = None,
-        error: Optional[str] = None
+        error: Optional[str] = None,
+        source: str = "local"
     ):
         """
         Record query completion and metrics
@@ -113,6 +114,7 @@ class PerformanceMonitor:
             had_fallback: Whether Claude fallback was used
             confidence_score: Confidence score (0.0 - 1.0) if available
             error: Error message if any
+            source: Response source ("local", "perplexity", "claude")
         """
         if self._current_query_start is None:
             return
@@ -133,6 +135,7 @@ class PerformanceMonitor:
             "had_fallback": had_fallback,
             "confidence_score": confidence_score,
             "error": error,
+            "source": source,  # Track response source
             "feedback": None  # Will be updated if user provides feedback
         }
 
@@ -268,6 +271,13 @@ class PerformanceMonitor:
             direct_commands = sum(1 for q in self.metrics["queries"] if q["was_direct_command"])
             llm_queries = total_queries - direct_commands
 
+            # Source breakdown
+            source_counts = {"local": 0, "perplexity": 0, "claude": 0}
+            for q in self.metrics["queries"]:
+                source = q.get("source", "local")
+                if source in source_counts:
+                    source_counts[source] += 1
+
             # Recent errors
             recent_errors = self.metrics["errors"][-5:]
 
@@ -282,6 +292,12 @@ class PerformanceMonitor:
 Total Queries Processed:        {total_queries}
   • Direct Commands (instant):  {direct_commands}
   • LLM Queries (20-30s):        {llm_queries}
+
+🌐 RESPONSE SOURCES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🧬 Local (Genesis):           {source_counts['local']}
+  🔍 Perplexity Research:       {source_counts['perplexity']}
+  ☁️  Claude Fallback:           {source_counts['claude']}
 
 ⚡ RESPONSE SPEED
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

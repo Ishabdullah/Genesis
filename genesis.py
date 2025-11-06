@@ -54,6 +54,14 @@ class Genesis:
         self.model_path = "./models/CodeLlama-7B-Instruct.Q4_K_M.gguf"
         self.running = True
 
+        # Retry and context handling
+        self.last_user_query = None
+        self.last_reasoning_steps = []
+        self.last_response = None
+        self.last_source = "local"  # local, perplexity, claude
+        self.context_stack = []  # Last 10-20 interactions for follow-ups
+        self.max_context_stack = 15
+
         # Genesis identity and system prompt
         self.identity = """I'm Genesis, a local AI assistant running entirely on your device using the CodeLlama-7B model. I can execute code, manage files, and help with development tasks - all while keeping your data private and working offline."""
 
@@ -596,6 +604,26 @@ Rules:
         Args:
             user_input: User's input text
         """
+        # Check for retry commands
+        retry_patterns = ["try again", "recalculate", "retry", "redo that", "do that again"]
+        is_retry = any(pattern in user_input.lower() for pattern in retry_patterns)
+
+        # Check for follow-up patterns that need context
+        follow_up_patterns = ["explain further", "give an example", "tell me more", "elaborate", "more details"]
+        is_follow_up = any(pattern in user_input.lower() for pattern in follow_up_patterns)
+
+        # Handle retry - use last query
+        if is_retry and self.last_user_query:
+            print(f"{Colors.DIM}♻️ Retrying last query: \"{self.last_user_query}\"{Colors.RESET}\n")
+            user_input = self.last_user_query
+
+        # Handle follow-up - prepend context
+        if is_follow_up and self.context_stack:
+            # Get last interaction for context
+            last_context = self.context_stack[-1] if self.context_stack else None
+            if last_context:
+                print(f"{Colors.DIM}📚 Using context from previous interaction{Colors.RESET}\n")
+
         # Handle special commands
         if user_input.lower() == "#exit":
             print(f"\n{Colors.CYAN}Goodbye! 🧬{Colors.RESET}\n")
@@ -702,13 +730,20 @@ Rules:
             )
             return
 
+        # Store current query as last query (before processing)
+        if not is_retry:
+            self.last_user_query = user_input
+
         # Process through LLM with reasoning
         # Generate reasoning trace before LLM call
         problem_type = self.reasoning.detect_problem_type(user_input)
         reasoning_steps = self.reasoning.generate_reasoning_trace(user_input, problem_type)
 
-        # Display thinking trace
-        self.thinking_trace.display_steps(reasoning_steps, show_details=True)
+        # Store reasoning for retry
+        self.last_reasoning_steps = reasoning_steps
+
+        # Display thinking trace (local processing)
+        self.thinking_trace.display_steps(reasoning_steps, show_details=True, source="local")
 
         # Generate pseudocode for programming problems
         if problem_type == "programming":
@@ -725,11 +760,33 @@ Rules:
         # Check for uncertainty and trigger fallback if needed
         should_fallback, uncertainty_analysis = self.uncertainty.should_trigger_fallback(response)
 
+        perplexity_response = None
         claude_response = None
-        if should_fallback and self.claude_fallback.is_enabled():
-            print(f"\n{Colors.YELLOW}⚡ Genesis is uncertain (confidence: {uncertainty_analysis['confidence_score']:.2f})")
-            print(f"   Requesting Claude assistance...{Colors.RESET}\n")
+        response_source = "local"
 
+        # New fallback chain: Try Perplexity first, then Claude
+        if should_fallback:
+            print(f"\n{Colors.YELLOW}⚡ Genesis is uncertain (confidence: {uncertainty_analysis['confidence_score']:.2f})")
+            print(f"   Consulting external sources...{Colors.RESET}\n")
+
+            # Step 1: Try Perplexity
+            success, perplexity_result = self.tools.ask_perplexity(user_input)
+
+            if success:
+                print(f"{Colors.GREEN}✓ Perplexity consultation successful{Colors.RESET}\n")
+                perplexity_response = perplexity_result
+                response_source = "perplexity"
+
+                # Display Perplexity response with thinking trace
+                self.thinking_trace.display_thinking_header(source="perplexity")
+                print(f"{Colors.CYAN}Perplexity Research:{Colors.RESET}\n{perplexity_result}\n")
+                print(f"{Colors.DIM}{'─' * 60}{Colors.RESET}\n")
+            else:
+                print(f"{Colors.YELLOW}⚠ Perplexity unavailable: {perplexity_result}{Colors.RESET}")
+                print(f"{Colors.CYAN}   Falling back to Claude...{Colors.RESET}\n")
+
+        # Step 2: If Perplexity failed or wasn't tried, use Claude
+        if should_fallback and not perplexity_response and self.claude_fallback.is_enabled():
             # Record fallback attempt
             claude_reachable = False
 
@@ -739,6 +796,9 @@ Rules:
                 response,
                 uncertainty_analysis
             )
+
+            if claude_response:
+                response_source = "claude"
 
             # Check if Claude was reachable
             claude_reachable = (claude_response is not None)
@@ -802,10 +862,17 @@ Rules:
                 )
 
         # Validate reasoning before displaying final answer
-        if claude_response:
+        # Priority: Perplexity > Claude > Local
+        if perplexity_response:
+            final_response = perplexity_response
+        elif claude_response:
             final_response = claude_response
         else:
             final_response = response
+
+        # Store for retry
+        self.last_response = final_response
+        self.last_source = response_source
 
         is_valid, warnings = self.reasoning.validate_reasoning(reasoning_steps, final_response)
 
@@ -848,7 +915,20 @@ Rules:
 
         self.memory.add_interaction(user_input, full_response)
 
-        # Store in learning memory with metadata including reasoning trace
+        # Add to context stack for follow-ups
+        context_entry = {
+            "user_input": user_input,
+            "response": full_response,
+            "source": response_source,
+            "timestamp": __import__('time').time()
+        }
+        self.context_stack.append(context_entry)
+
+        # Trim context stack to max size
+        if len(self.context_stack) > self.max_context_stack:
+            self.context_stack = self.context_stack[-self.max_context_stack:]
+
+        # Store in learning memory with metadata including reasoning trace and source
         reasoning_trace_summary = [
             {"step": s.step_num, "description": s.description}
             for s in reasoning_steps
@@ -858,12 +938,15 @@ Rules:
             user_input=user_input,
             assistant_response=full_response,
             metadata={
-                "had_fallback": claude_response is not None,
+                "had_fallback": (claude_response is not None or perplexity_response is not None),
                 "confidence_score": uncertainty_analysis.get('confidence_score'),
                 "was_direct_command": False,
                 "problem_type": problem_type,
                 "reasoning_steps": reasoning_trace_summary,
-                "reasoning_valid": is_valid
+                "reasoning_valid": is_valid,
+                "source": response_source,
+                "used_perplexity": perplexity_response is not None,
+                "used_claude": claude_response is not None
             }
         )
 
@@ -873,9 +956,10 @@ Rules:
             user_input=user_input,
             response=full_response,
             was_direct_command=False,
-            had_fallback=(claude_response is not None),
+            had_fallback=(claude_response is not None or perplexity_response is not None),
             confidence_score=uncertainty_analysis.get('confidence_score'),
-            error=None
+            error=None,
+            source=response_source
         )
 
     def get_multiline_input(self) -> str:
