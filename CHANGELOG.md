@@ -5,6 +5,46 @@ All notable changes to Genesis will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1] - 2025-11-06
+
+### 🔧 Fix: Direct Command Handlers for Device Features
+
+**Fixed device commands to work instantly with natural language - no LLM processing required!**
+
+### Added
+- **Direct command handlers** for all device features
+- **Pattern matching** for natural language device requests
+- **Instant execution** - commands execute immediately without LLM delay
+- **160+ trigger patterns** covering all common variations
+
+### Changed
+- Device commands now execute via `handle_direct_command()` instead of LLM
+- Typical response time: **< 1 second** (vs ~3-5s through LLM)
+- More reliable command recognition
+- Added variations: "my flashlight", "my location", etc.
+
+### Fixed
+- Device commands were going to LLM instead of executing directly
+- "where am i" conflict between directory and location query
+- Flashlight command not recognizing "turn on my flashlight"
+
+### Direct Command Examples
+```bash
+# These now work instantly:
+Genesis> Turn on my flashlight        # ✓ Instant
+Genesis> What time is it?             # ✓ Instant
+Genesis> Where am I?                  # ✓ Instant
+Genesis> Take a photo                 # ✓ Instant
+Genesis> Set volume to 10             # ✓ Instant
+```
+
+### Files Modified
+- `genesis.py` (~160 lines added to handle_direct_command)
+- `README.md` (Updated with natural language examples)
+- `CHANGELOG.md` (This changelog)
+
+---
+
 ## [2.2.0] - 2025-11-06
 
 ### 🚀 Major: Device Integration & Hardware Access

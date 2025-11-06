@@ -414,9 +414,11 @@ Rules:
         if "files in" in input_lower and "home" in input_lower:
             return True, self.tools.list_directory(os.path.expanduser("~"))
 
-        # Current directory
-        if input_lower in ["pwd", "current directory", "where am i"]:
-            return True, self.tools.get_current_directory()
+        # Current directory (but not location query)
+        if input_lower in ["pwd", "current directory"] or (input_lower == "where am i" and "location" not in input_lower):
+            # Check if it's not a location query
+            if "location" not in input_lower and "gps" not in input_lower and "coordinates" not in input_lower:
+                return True, self.tools.get_current_directory()
 
         # Read file commands
         if input_lower.startswith("cat "):
@@ -569,6 +571,166 @@ Rules:
 
                     result = {"name": name, "skills": skills}
                     return True, json.dumps(result, indent=2)
+
+        # Device commands - handle directly
+        # Flashlight/Torch control
+        flashlight_on_triggers = ["turn on flashlight", "turn on torch", "turn on the flashlight",
+                                   "turn on the torch", "turn on my flashlight", "turn on my torch",
+                                   "flashlight on", "torch on", "enable flashlight", "enable torch",
+                                   "turn flashlight on", "turn torch on", "turn my flashlight on"]
+        flashlight_off_triggers = ["turn off flashlight", "turn off torch", "turn off the flashlight",
+                                    "turn off the torch", "turn off my flashlight", "turn off my torch",
+                                    "flashlight off", "torch off", "disable flashlight", "disable torch",
+                                    "turn flashlight off", "turn torch off", "turn my flashlight off"]
+
+        if any(trigger in input_lower for trigger in flashlight_on_triggers):
+            result = self.device_manager.toggle_flashlight(state=True)
+            if result['success']:
+                return True, f"✓ Flashlight turned ON"
+            else:
+                return True, f"✗ Failed to turn on flashlight: {result.get('error')}"
+
+        if any(trigger in input_lower for trigger in flashlight_off_triggers):
+            result = self.device_manager.toggle_flashlight(state=False)
+            if result['success']:
+                return True, f"✓ Flashlight turned OFF"
+            else:
+                return True, f"✗ Failed to turn off flashlight: {result.get('error')}"
+
+        # Location queries
+        location_triggers = ["where am i", "what is my location", "what's my location",
+                           "my location", "current location", "gps location", "my coordinates"]
+        if any(trigger in input_lower for trigger in location_triggers):
+            result = self.device_manager.get_location()
+            if result['success']:
+                lat = result['latitude']
+                lon = result['longitude']
+                acc = result.get('accuracy', 'unknown')
+                return True, f"📍 Your current location:\n  Latitude: {lat}\n  Longitude: {lon}\n  Accuracy: ±{acc}m"
+            else:
+                return True, f"✗ Failed to get location: {result.get('error')}"
+
+        # Date/Time queries
+        time_triggers = ["what time is it", "what's the time", "current time", "tell me the time"]
+        date_triggers = ["what is the date", "what's the date", "today's date", "current date",
+                        "what day is it", "what day is today"]
+
+        if any(trigger in input_lower for trigger in time_triggers):
+            result = self.device_manager.get_date_time()
+            if result['success']:
+                return True, f"🕐 Current time: {result['time']} ({result['timezone']})"
+            else:
+                return True, f"✗ Failed to get time: {result.get('error')}"
+
+        if any(trigger in input_lower for trigger in date_triggers):
+            result = self.device_manager.get_date_time()
+            if result['success']:
+                return True, f"📅 Today is {result['day_of_week']}, {result['date']}"
+            else:
+                return True, f"✗ Failed to get date: {result.get('error')}"
+
+        # Photo commands
+        photo_triggers = ["take a photo", "take photo", "take a picture", "take picture",
+                         "capture photo", "capture image"]
+        selfie_triggers = ["take a selfie", "take selfie", "selfie"]
+
+        if any(trigger in input_lower for trigger in selfie_triggers):
+            result = self.device_manager.take_photo(camera="front")
+            if result['success']:
+                return True, f"📸 Selfie captured!\n  File: {result['filepath']}\n  Size: {result['size_bytes'] / 1024:.1f} KB"
+            else:
+                return True, f"✗ Failed to take selfie: {result.get('error')}"
+
+        if any(trigger in input_lower for trigger in photo_triggers):
+            # Check for camera specification
+            camera = "front" if "front" in input_lower else "back"
+            result = self.device_manager.take_photo(camera=camera)
+            if result['success']:
+                return True, f"📸 Photo captured!\n  Camera: {camera}\n  File: {result['filepath']}\n  Size: {result['size_bytes'] / 1024:.1f} KB"
+            else:
+                return True, f"✗ Failed to take photo: {result.get('error')}"
+
+        # Volume control
+        if "volume" in input_lower or "mute" in input_lower or "unmute" in input_lower:
+            # Parse volume command
+            import re
+
+            # Set volume to specific level
+            volume_match = re.search(r'volume.*?(\d+)', input_lower)
+            if volume_match:
+                volume_level = int(volume_match.group(1))
+                stream = "music"  # default stream
+                if "ring" in input_lower:
+                    stream = "ring"
+                elif "alarm" in input_lower:
+                    stream = "alarm"
+
+                result = self.device_manager.adjust_volume(stream=stream, volume=volume_level)
+                if result['success']:
+                    return True, f"🔊 Volume set to {result['volume']}/15 for {stream}"
+                else:
+                    return True, f"✗ Failed to adjust volume: {result.get('error')}"
+
+            # Increase/decrease volume
+            if "increase" in input_lower or "raise" in input_lower or "up" in input_lower:
+                result = self.device_manager.adjust_volume(stream="music", change=2)
+                if result['success']:
+                    return True, f"🔊 Volume increased to {result['volume']}/15"
+                else:
+                    return True, f"✗ Failed to increase volume: {result.get('error')}"
+
+            if "decrease" in input_lower or "lower" in input_lower or "down" in input_lower:
+                result = self.device_manager.adjust_volume(stream="music", change=-2)
+                if result['success']:
+                    return True, f"🔊 Volume decreased to {result['volume']}/15"
+                else:
+                    return True, f"✗ Failed to decrease volume: {result.get('error')}"
+
+            # Mute
+            if "mute" in input_lower and "unmute" not in input_lower:
+                result = self.device_manager.adjust_volume(stream="music", volume=0)
+                if result['success']:
+                    return True, f"🔇 Volume muted"
+                else:
+                    return True, f"✗ Failed to mute: {result.get('error')}"
+
+        # Brightness control
+        if "brightness" in input_lower:
+            import re
+            brightness_match = re.search(r'brightness.*?(\d+)', input_lower)
+
+            if brightness_match:
+                brightness_level = int(brightness_match.group(1))
+                result = self.device_manager.adjust_brightness(brightness=brightness_level)
+                if result['success']:
+                    return True, f"☀️ Brightness set to {result['brightness']}/255 ({result['brightness_percent']}%)"
+                else:
+                    return True, f"✗ Failed to adjust brightness: {result.get('error')}"
+
+            # Increase/decrease brightness
+            if "increase" in input_lower or "brighter" in input_lower:
+                # Get current and increase
+                return True, "To increase brightness, please specify a level (e.g., 'set brightness to 200')"
+
+            if "decrease" in input_lower or "dim" in input_lower or "darker" in input_lower:
+                result = self.device_manager.adjust_brightness(brightness=50)
+                if result['success']:
+                    return True, f"☀️ Screen dimmed to {result['brightness']}/255"
+                else:
+                    return True, f"✗ Failed to dim screen: {result.get('error')}"
+
+        # Audio recording
+        if "record audio" in input_lower or "record sound" in input_lower:
+            import re
+            duration_match = re.search(r'(\d+)\s*second', input_lower)
+            duration = int(duration_match.group(1)) if duration_match else 5
+
+            print(f"\n{Colors.CYAN}🎤 Recording {duration} seconds of audio...{Colors.RESET}")
+            result = self.device_manager.record_audio(duration=duration)
+            if result['success']:
+                return True, f"✓ Audio recorded!\n  File: {result['filepath']}\n  Duration: {duration}s\n  Size: {result['size_bytes'] / 1024:.1f} KB"
+            else:
+                return True, f"✗ Failed to record audio: {result.get('error')}"
 
         # Not a direct command
         return False, ""

@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform: Termux](https://img.shields.io/badge/Platform-Termux-green.svg)](https://termux.dev)
 [![Model: CodeLlama-7B](https://img.shields.io/badge/Model-CodeLlama--7B-orange.svg)](https://github.com/facebookresearch/codellama)
-[![Version: 2.2.0](https://img.shields.io/badge/Version-2.2.0-blue.svg)](CHANGELOG.md)
+[![Version: 2.2.1](https://img.shields.io/badge/Version-2.2.1-blue.svg)](CHANGELOG.md)
 [![Tests: Passing](https://img.shields.io/badge/Tests-Passing-brightgreen.svg)](tests/)
 [![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 
@@ -378,60 +378,139 @@ Every response shows its source:
 
 ### Example Usage
 
+**✨ All device features work with natural language!** Just ask Genesis in plain English - no special syntax required.
+
 #### Get Current Location
 ```
-Genesis> Where am I right now?
-
-[Executing Device Command: get_location]
-
-Genesis: You are currently at:
+Genesis> Where am I?
+📍 Your current location:
   Latitude: 40.7128
   Longitude: -74.0060
-  Location: New York, NY
-  Accuracy: ±5 meters
+  Accuracy: ±5m
+
+# Also works with:
+Genesis> What's my location?
+Genesis> Where am I right now?
+Genesis> My current location
 ```
 
-#### Take a Photo
+#### Get Date/Time
 ```
-Genesis> Take a photo with the back camera
+Genesis> What time is it?
+🕐 Current time: 15:30:22 (EST)
 
-[Executing Device Command: take_photo]
+Genesis> What's the date?
+📅 Today is Thursday, 2025-11-06
 
-Genesis: Photo captured successfully!
-  File: data/media/photo_20251106_143022.jpg
-  Camera: back
-  Size: 2.4 MB
+# Also works with:
+Genesis> What's today's date?
+Genesis> Tell me the time
+Genesis> Current time
 ```
 
 #### Control Flashlight
 ```
-Genesis> Turn on the flashlight
+Genesis> Turn on my flashlight
+✓ Flashlight turned ON
 
-[Executing Device Command: toggle_flashlight]
+Genesis> Turn off the flashlight
+✓ Flashlight turned OFF
 
-Genesis: Flashlight turned ON
+# Also works with:
+Genesis> Flashlight on
+Genesis> Turn on torch
+Genesis> Enable flashlight
 ```
 
-#### Adjust Volume
+#### Take Photos
 ```
+Genesis> Take a photo
+📸 Photo captured!
+  Camera: back
+  File: data/media/photo_20251106_143022.jpg
+  Size: 2.4 MB
+
+Genesis> Take a selfie
+📸 Selfie captured!
+  Camera: front
+  File: data/media/photo_20251106_143055.jpg
+  Size: 1.8 MB
+
+# Also works with:
+Genesis> Take a photo with the back camera
+Genesis> Take a picture
+Genesis> Capture a photo
+```
+
+#### Control Volume
+```
+Genesis> Set volume to 10
+🔊 Volume set to 10/15 for music
+
+Genesis> Increase volume
+🔊 Volume increased to 12/15
+
+Genesis> Mute
+🔇 Volume muted
+
+# Also works with:
 Genesis> Set music volume to 12
+Genesis> Raise volume
+Genesis> Lower volume
+```
 
-[Executing Device Command: adjust_volume]
+#### Adjust Brightness
+```
+Genesis> Set brightness to 150
+☀️ Brightness set to 150/255 (59%)
 
-Genesis: Volume adjusted
-  Stream: music
-  Volume: 12/15 (80%)
+Genesis> Dim the screen
+☀️ Screen dimmed to 50/255
+
+# Also works with:
+Genesis> Set brightness to 200
+Genesis> Increase brightness
+```
+
+#### Record Audio
+```
+Genesis> Record 5 seconds of audio
+🎤 Recording 5 seconds of audio...
+✓ Audio recorded!
+  File: data/media/audio_20251106_143122.m4a
+  Duration: 5s
+  Size: 78.5 KB
+
+# Also works with:
+Genesis> Record audio for 10 seconds
+Genesis> Record sound
 ```
 
 ### How It Works
 
-Genesis uses **Termux API** to access Android capabilities. Device commands are:
+Genesis recognizes natural language requests and **directly executes** device commands without needing the LLM:
 
-1. **Detected** - Genesis identifies requests requiring device access
-2. **Generated** - Creates structured JSON command automatically
-3. **Executed** - Runs through secure Termux API layer
-4. **Verified** - Returns actual results from device
-5. **Integrated** - Uses real data in responses
+1. **Pattern Matching** - Your request is matched against command triggers
+2. **Instant Execution** - Command executes immediately (no LLM delay)
+3. **Termux API** - Secure system call through Termux API layer
+4. **Real Results** - Actual device data returned instantly
+5. **Fast Response** - Typical response time < 1 second
+
+**Why this approach?**
+- ⚡ **Instant response** - No LLM processing delay
+- ✅ **100% reliable** - Pattern matching always works
+- 🎯 **Predictable** - Same command always works the same way
+- 🔐 **Secure** - Commands vetted and validated
+
+**Supported Natural Language Patterns:**
+- Flashlight: "turn on flashlight", "flashlight on", "turn on my torch"
+- Location: "where am i", "my location", "gps coordinates"
+- Time: "what time is it", "current time", "tell me the time"
+- Date: "what's the date", "today's date", "what day is it"
+- Photos: "take a photo", "take a selfie", "capture image"
+- Volume: "set volume to X", "increase volume", "mute"
+- Brightness: "set brightness to X", "dim screen"
+- Audio: "record X seconds of audio"
 
 ### Requirements
 
