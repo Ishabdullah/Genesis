@@ -58,11 +58,13 @@ class Genesis:
 
         # Retry and context handling
         self.last_user_query = None
+        self.last_query_id = None  # Track the ID of the last query for retry
         self.last_reasoning_steps = []
         self.last_response = None
         self.last_source = "local"  # local, perplexity, claude
         self.context_stack = []  # Last 10-20 interactions for follow-ups
         self.max_context_stack = 15
+        self.question_counter = 0  # Counter for generating unique question IDs
 
         # Genesis identity and system prompt
         self.identity = """I'm Genesis, a local AI assistant running entirely on your device using the CodeLlama-7B model. I can execute code, manage files, and help with development tasks - all while keeping your data private and working offline."""
@@ -759,9 +761,23 @@ Rules:
             )
             return
 
+        # Generate unique question ID for context tracking
+        if is_retry and self.last_query_id:
+            # Reuse the same question ID for retry
+            current_question_id = self.last_query_id
+        else:
+            # New question - generate new ID
+            self.question_counter += 1
+            current_question_id = f"q{self.question_counter}"
+
         # Store current query as last query (before processing)
         if not is_retry:
             self.last_user_query = user_input
+            self.last_query_id = current_question_id
+
+        # Inform reasoning engine we're starting a new question (or retrying)
+        # This clears previous calculated answers if it's a new question
+        self.reasoning.start_new_question(current_question_id)
 
         # Process through LLM with reasoning
         # Generate reasoning trace before LLM call
@@ -961,12 +977,15 @@ Rules:
 
         self.memory.add_interaction(user_input, full_response)
 
-        # Add to context stack for follow-ups
+        # Add to context stack for follow-ups with question ID boundary marker
         context_entry = {
+            "question_id": current_question_id,
             "user_input": user_input,
             "response": full_response,
             "source": response_source,
-            "timestamp": __import__('time').time()
+            "problem_type": problem_type,
+            "timestamp": __import__('time').time(),
+            "is_retry": is_retry
         }
         self.context_stack.append(context_entry)
 

@@ -27,12 +27,27 @@ class ReasoningEngine:
         self.math_reasoner = MathReasoner()
         self.last_math_answer = None
         self.last_math_solution = None
+        self.current_question_id = None  # Track current question being processed
+
+    def start_new_question(self, question_id: str):
+        """
+        Mark the start of a new question - clears previous answers
+
+        Args:
+            question_id: Unique identifier for this question
+        """
+        if self.current_question_id != question_id:
+            # New question - clear previous calculated answers
+            self.last_math_answer = None
+            self.last_math_solution = None
+            self.current_question_id = question_id
+            self.current_trace = []
 
     def _load_patterns(self) -> Dict:
         """Load reasoning patterns for different problem types"""
         return {
             "math_word_problem": {
-                "keywords": ["if", "how many", "calculate", "total", "rate", "per"],
+                "keywords": ["if", "how many", "how much", "calculate", "total", "rate", "per", "cost", "all but"],
                 "steps": [
                     "Identify the given information",
                     "Determine what needs to be calculated",

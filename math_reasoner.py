@@ -325,12 +325,12 @@ class MathReasoner:
 
         # Pattern: Difference problems (bat and ball)
         if ('cost' in query_lower or 'costs' in query_lower) and 'more than' in query_lower:
-            # Extract numbers with decimal points
-            numbers = re.findall(r'\$?([\d]+\.[\d]+|\d+)', query_lower)
+            # Extract ALL numbers including decimals
+            numbers = re.findall(r'\$?(\d+\.?\d*)', query_lower)
             if len(numbers) >= 2:
                 try:
                     # Usually: total cost $X.XX, one costs $Y.YY more than the other
-                    floats = [float(n.replace('$', '')) for n in numbers]
+                    floats = [float(n.replace('$', '').replace(',', '')) for n in numbers if n]
                     # First number is usually the total, second is the difference
                     total = floats[0]
                     difference = floats[1]
@@ -340,7 +340,11 @@ class MathReasoner:
 
         # Pattern: Logical interpretation (all but X)
         if 'all but' in query_lower:
-            total_match = re.search(r'has\s+(\d+)', query_lower)
+            # Look for "had X" or "has X" or just "X sheep"
+            total_match = re.search(r'(?:had|has)\s+(\d+)', query_lower)
+            if not total_match:
+                # Try: "X sheep" or "X items"
+                total_match = re.search(r'(\d+)\s+(?:sheep|items?|things?|objects?)', query_lower)
             if total_match:
                 total = int(total_match.group(1))
                 return self.solve_logical_interpretation(total, query)

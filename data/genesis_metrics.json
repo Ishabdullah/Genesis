@@ -741,6 +741,126 @@
       "error": null,
       "source": "local",
       "feedback": null
+    },
+    {
+      "id": "q_1762400770404",
+      "timestamp": "2025-11-05T22:46:47.717457",
+      "user_input": "There are two doors: one leads to freedom, one to death. Two guards \u2014 one always lies, one always tells the truth. You can ask one question. What do you ask?",
+      "response_time_ms": 37312.83,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": null
+    },
+    {
+      "id": "q_1762400891642",
+      "timestamp": "2025-11-05T22:48:38.877347",
+      "user_input": "You have a 3-liter jug and a 5-liter jug. You need exactly 4 liters of water. How?",
+      "response_time_ms": 27234.77,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": null
+    },
+    {
+      "id": "q_1762400936911",
+      "timestamp": "2025-11-05T22:49:44.329815",
+      "user_input": "#clear",
+      "response_time_ms": 47418.28,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": null
+    },
+    {
+      "id": "q_1762401064946",
+      "timestamp": "2025-11-05T22:52:01.934942",
+      "user_input": "You have a 3-liter jug and a 5-liter jug. You need exactly 4 liters of water. How?",
+      "response_time_ms": 56988.59,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 0.7,
+      "error": null,
+      "source": "local",
+      "feedback": "incorrect"
+    },
+    {
+      "id": "q_1762401330269",
+      "timestamp": "2025-11-05T22:55:57.242058",
+      "user_input": "My name is Ish remember that",
+      "response_time_ms": 26973.03,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": null
+    },
+    {
+      "id": "q_1762401379361",
+      "timestamp": "2025-11-05T22:56:46.378064",
+      "user_input": "What is your name? and what is my name?",
+      "response_time_ms": 27016.08,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": "correct"
+    },
+    {
+      "id": "q_1762401453234",
+      "timestamp": "2025-11-05T22:58:26.133650",
+      "user_input": "If 5 machines can make 5 widgets in 5 minutes, how many machines are needed to make 100 widgets in 100 minutes?",
+      "response_time_ms": 52898.94,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 0.7,
+      "error": null,
+      "source": "local_calculated",
+      "feedback": "correct"
+    },
+    {
+      "id": "q_1762401556058",
+      "timestamp": "2025-11-05T22:59:56.680930",
+      "user_input": "A farmer has 17 sheep and all but 9 run away. How many are left?",
+      "response_time_ms": 40622.87,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local_calculated",
+      "feedback": "correct"
+    },
+    {
+      "id": "q_1762401633069",
+      "timestamp": "2025-11-05T23:01:41.417635",
+      "user_input": "You\u2019re in a room with 3 light switches outside and 3 bulbs inside. You can only go in once. How do you tell which switch controls which bulb?",
+      "response_time_ms": 68348.41,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local_calculated",
+      "feedback": null
+    },
+    {
+      "id": "q_1762401760130",
+      "timestamp": "2025-11-05T23:03:47.395859",
+      "user_input": "You\u2019re in a room with 3 light switches outside and 3 bulbs inside. You can only go in once. How do you tell which switch controls which bulb?",
+      "response_time_ms": 67265.29,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 0.7,
+      "error": null,
+      "source": "local_calculated",
+      "feedback": "incorrect"
     }
   ],
   "fallbacks": [
@@ -759,14 +879,14 @@
   ],
   "errors": [],
   "feedback": {
-    "correct": 19,
-    "incorrect": 14
+    "correct": 22,
+    "incorrect": 16
   },
   "statistics": {
-    "total_queries": 66,
+    "total_queries": 76,
     "total_fallbacks": 2,
     "total_errors": 0,
-    "avg_response_time_ms": 33662.14
+    "avg_response_time_ms": 35181.32
   },
   "session_start": "2025-11-05T13:31:48.865827"
 }

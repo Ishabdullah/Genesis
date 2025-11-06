@@ -1454,6 +1454,332 @@
         "used_perplexity": false,
         "used_claude": false
       }
+    },
+    {
+      "timestamp": "2025-11-05T22:46:47.713467",
+      "user_input": "There are two doors: one leads to freedom, one to death. Two guards \u2014 one always lies, one always tells the truth. You can ask one question. What do you ask?",
+      "assistant_response": "I would ask the first guard: \"What is the correct door?\" [end of text]",
+      "metadata": {
+        "had_fallback": false,
+        "confidence_score": 1.0,
+        "was_direct_command": false,
+        "problem_type": "general",
+        "reasoning_steps": [
+          {
+            "step": 1,
+            "description": "Understand the question"
+          },
+          {
+            "step": 2,
+            "description": "Identify relevant information"
+          },
+          {
+            "step": 3,
+            "description": "Apply logical reasoning"
+          },
+          {
+            "step": 4,
+            "description": "Formulate the answer"
+          }
+        ],
+        "reasoning_valid": true,
+        "source": "local",
+        "used_perplexity": false,
+        "used_claude": false
+      }
+    },
+    {
+      "timestamp": "2025-11-05T22:48:38.870613",
+      "user_input": "You have a 3-liter jug and a 5-liter jug. You need exactly 4 liters of water. How?",
+      "assistant_response": "I would ask the first guard: \"What is the correct door?\" [end of text]",
+      "metadata": {
+        "had_fallback": false,
+        "confidence_score": 1.0,
+        "was_direct_command": false,
+        "problem_type": "general",
+        "reasoning_steps": [
+          {
+            "step": 1,
+            "description": "Understand the question"
+          },
+          {
+            "step": 2,
+            "description": "Identify relevant information"
+          },
+          {
+            "step": 3,
+            "description": "Apply logical reasoning"
+          },
+          {
+            "step": 4,
+            "description": "Formulate the answer"
+          }
+        ],
+        "reasoning_valid": true,
+        "source": "local",
+        "used_perplexity": false,
+        "used_claude": false
+      }
+    },
+    {
+      "timestamp": "2025-11-05T22:49:44.325705",
+      "user_input": "#clear",
+      "assistant_response": "I would ask the first guard: \"What is the correct door?\" [end of text]",
+      "metadata": {
+        "had_fallback": false,
+        "confidence_score": 1.0,
+        "was_direct_command": false,
+        "problem_type": "general",
+        "reasoning_steps": [
+          {
+            "step": 1,
+            "description": "Understand the question"
+          },
+          {
+            "step": 2,
+            "description": "Identify relevant information"
+          },
+          {
+            "step": 3,
+            "description": "Apply logical reasoning"
+          },
+          {
+            "step": 4,
+            "description": "Formulate the answer"
+          }
+        ],
+        "reasoning_valid": true,
+        "source": "local",
+        "used_perplexity": false,
+        "used_claude": false
+      }
+    },
+    {
+      "timestamp": "2025-11-05T22:52:01.924859",
+      "user_input": "You have a 3-liter jug and a 5-liter jug. You need exactly 4 liters of water. How?",
+      "assistant_response": "I have a 3-liter jug and a 5-liter jug. To obtain exactly 4 liters of water, I can use the 5-liter jug to fill the 3-liter jug, and then use the 3-liter jug to fill a 4-liter container.\n\nHere's the algorithm:\n\n1. Fill the 5-liter jug with water.\n2. Pour the 5-liter jug's contents into the 3-liter jug.\n3. Fill the 4-liter container with the 3-liter jug's contents.\n\nThe total amount of water obtained is 5 liters (from the 5-liter jug) + 3 liters (from the 3-liter jug) = 8 liters. However, the 4-liter container is only 1 liter short of the desired amount. Therefore, I will need to use the 3-liter jug to fill the 4-liter container in order to obtain exactly 4 liters of water. [end of text]",
+      "metadata": {
+        "had_fallback": false,
+        "confidence_score": 0.7,
+        "was_direct_command": false,
+        "problem_type": "general",
+        "reasoning_steps": [
+          {
+            "step": 1,
+            "description": "Understand the question"
+          },
+          {
+            "step": 2,
+            "description": "Identify relevant information"
+          },
+          {
+            "step": 3,
+            "description": "Apply logical reasoning"
+          },
+          {
+            "step": 4,
+            "description": "Formulate the answer"
+          }
+        ],
+        "reasoning_valid": true,
+        "source": "local",
+        "used_perplexity": false,
+        "used_claude": false
+      }
+    },
+    {
+      "timestamp": "2025-11-05T22:55:57.233550",
+      "user_input": "My name is Ish remember that",
+      "assistant_response": "Hello Ish, nice to meet you! How can I assist you today? [end of text]",
+      "metadata": {
+        "had_fallback": false,
+        "confidence_score": 1.0,
+        "was_direct_command": false,
+        "problem_type": "general",
+        "reasoning_steps": [
+          {
+            "step": 1,
+            "description": "Understand the question"
+          },
+          {
+            "step": 2,
+            "description": "Identify relevant information"
+          },
+          {
+            "step": 3,
+            "description": "Apply logical reasoning"
+          },
+          {
+            "step": 4,
+            "description": "Formulate the answer"
+          }
+        ],
+        "reasoning_valid": true,
+        "source": "local",
+        "used_perplexity": false,
+        "used_claude": false
+      }
+    },
+    {
+      "timestamp": "2025-11-05T22:56:46.369252",
+      "user_input": "What is your name? and what is my name?",
+      "assistant_response": "My name is Genesis, and your name is Ish. [end of text]",
+      "metadata": {
+        "had_fallback": false,
+        "confidence_score": 1.0,
+        "was_direct_command": false,
+        "problem_type": "general",
+        "reasoning_steps": [
+          {
+            "step": 1,
+            "description": "Understand the question"
+          },
+          {
+            "step": 2,
+            "description": "Identify relevant information"
+          },
+          {
+            "step": 3,
+            "description": "Apply logical reasoning"
+          },
+          {
+            "step": 4,
+            "description": "Formulate the answer"
+          }
+        ],
+        "reasoning_valid": true,
+        "source": "local",
+        "used_perplexity": false,
+        "used_claude": false
+      }
+    },
+    {
+      "timestamp": "2025-11-05T22:58:26.123249",
+      "user_input": "If 5 machines can make 5 widgets in 5 minutes, how many machines are needed to make 100 widgets in 100 minutes?",
+      "assistant_response": "5",
+      "metadata": {
+        "had_fallback": false,
+        "confidence_score": 0.7,
+        "was_direct_command": false,
+        "problem_type": "math_word_problem",
+        "reasoning_steps": [
+          {
+            "step": 1,
+            "description": "Calculate production rate per worker per time unit"
+          },
+          {
+            "step": 2,
+            "description": "Calculate required total production rate"
+          },
+          {
+            "step": 3,
+            "description": "Calculate number of workers needed"
+          },
+          {
+            "step": 4,
+            "description": "Verify the answer"
+          }
+        ],
+        "reasoning_valid": true,
+        "source": "local_calculated",
+        "used_perplexity": false,
+        "used_claude": false
+      }
+    },
+    {
+      "timestamp": "2025-11-05T22:59:56.671009",
+      "user_input": "A farmer has 17 sheep and all but 9 run away. How many are left?",
+      "assistant_response": "9",
+      "metadata": {
+        "had_fallback": false,
+        "confidence_score": 1.0,
+        "was_direct_command": false,
+        "problem_type": "math_word_problem",
+        "reasoning_steps": [
+          {
+            "step": 1,
+            "description": "Parse the logical statement"
+          },
+          {
+            "step": 2,
+            "description": "Apply 'all but X' interpretation"
+          },
+          {
+            "step": 3,
+            "description": "Verify logical consistency"
+          }
+        ],
+        "reasoning_valid": true,
+        "source": "local_calculated",
+        "used_perplexity": false,
+        "used_claude": false
+      }
+    },
+    {
+      "timestamp": "2025-11-05T23:01:41.406748",
+      "user_input": "You\u2019re in a room with 3 light switches outside and 3 bulbs inside. You can only go in once. How do you tell which switch controls which bulb?",
+      "assistant_response": "9",
+      "metadata": {
+        "had_fallback": false,
+        "confidence_score": 1.0,
+        "was_direct_command": false,
+        "problem_type": "metacognitive",
+        "reasoning_steps": [
+          {
+            "step": 1,
+            "description": "Understand the meta-question or feedback"
+          },
+          {
+            "step": 2,
+            "description": "Identify relevant system capabilities or issues"
+          },
+          {
+            "step": 3,
+            "description": "Analyze what went wrong or what's being asked"
+          },
+          {
+            "step": 4,
+            "description": "Formulate corrective action or explanation"
+          }
+        ],
+        "reasoning_valid": true,
+        "source": "local_calculated",
+        "used_perplexity": false,
+        "used_claude": false
+      }
+    },
+    {
+      "timestamp": "2025-11-05T23:03:47.388995",
+      "user_input": "You\u2019re in a room with 3 light switches outside and 3 bulbs inside. You can only go in once. How do you tell which switch controls which bulb?",
+      "assistant_response": "9",
+      "metadata": {
+        "had_fallback": false,
+        "confidence_score": 0.7,
+        "was_direct_command": false,
+        "problem_type": "metacognitive",
+        "reasoning_steps": [
+          {
+            "step": 1,
+            "description": "Understand the meta-question or feedback"
+          },
+          {
+            "step": 2,
+            "description": "Identify relevant system capabilities or issues"
+          },
+          {
+            "step": 3,
+            "description": "Analyze what went wrong or what's being asked"
+          },
+          {
+            "step": 4,
+            "description": "Formulate corrective action or explanation"
+          }
+        ],
+        "reasoning_valid": true,
+        "source": "local_calculated",
+        "used_perplexity": false,
+        "used_claude": false
+      }
     }
   ]
 }

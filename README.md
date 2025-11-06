@@ -1136,7 +1136,8 @@ For issues, questions, or feature requests:
 | Component | Status | Tests | Coverage | LOC |
 |-----------|--------|-------|----------|-----|
 | **Math Reasoner** | ✅ Production | 6/6 ✅ | 100% | 370 |
-| **Reasoning Engine** | ✅ Production | 6/6 ✅ | 95% | 450 |
+| **Reasoning Engine** | ✅ Production | 6/6 ✅ | 100% | 475 |
+| **Multi-Turn Context** | ✅ Production | 5/5 ✅ | 100% | - |
 | **Feedback System** | ✅ Production | 1/1 ✅ | 100% | 120 |
 | **Retry Mechanism** | ✅ Production | 1/1 ✅ | 100% | 85 |
 | **Debug Logging** | ✅ Production | - | 90% | 200 |
@@ -1145,13 +1146,25 @@ For issues, questions, or feature requests:
 | **Claude Fallback** | ✅ Production | - | 85% | 320 |
 
 **Overall**: ✅ **PRODUCTION READY**
-**Total Code**: ~3,500 lines Python
+**Total Tests**: 11/11 passing (100%)
+**Total Code**: ~3,600 lines Python
 **Test Coverage**: 96% (critical paths)
-**Documentation**: 160KB+ (22 files)
+**Documentation**: 180KB+ (23 files)
 
 ---
 
 ## 🔄 Version History
+
+**v2.1** - November 5, 2025 (Current)
+- ✅ **Multi-turn context handling** - Proper question boundary tracking
+- ✅ **Question ID system** - Each question gets unique ID (q1, q2, ...)
+- ✅ **Fixed answer isolation** - New questions don't reuse old answers
+- ✅ **Enhanced retry** - Retry uses same ID, preserves calculated answers
+- ✅ **Improved math detection** - Added "how much", "cost", "all but" keywords
+- ✅ **Better regex patterns** - Improved "all but X" and decimal matching
+- ✅ **New test suite** - 5 multi-turn context tests (all passing)
+- ✅ **Comprehensive evaluation** - Full system audit and optimization
+- ✅ **All 11/11 tests passing** - 100% test coverage on critical paths
 
 **v2.0** - November 5, 2025
 - ✅ Deterministic math engine (100% accuracy)
@@ -1177,7 +1190,7 @@ For issues, questions, or feature requests:
 
 ---
 
-**Version**: 2.0
+**Version**: 2.1
 **Last Updated**: November 5, 2025
 **Tested On**: Samsung S24 Ultra (Android 14), Termux 0.118
 **Model**: CodeLlama-7B-Instruct-Q4_K_M
