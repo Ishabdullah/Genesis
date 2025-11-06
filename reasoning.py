@@ -7,6 +7,7 @@ Multi-step reasoning with pseudocode generation and validation
 import re
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
+from math_reasoner import MathReasoner
 
 @dataclass
 class ReasoningStep:
@@ -23,6 +24,9 @@ class ReasoningEngine:
         """Initialize reasoning engine"""
         self.current_trace = []
         self.reasoning_patterns = self._load_patterns()
+        self.math_reasoner = MathReasoner()
+        self.last_math_answer = None
+        self.last_math_solution = None
 
     def _load_patterns(self) -> Dict:
         """Load reasoning patterns for different problem types"""
@@ -66,6 +70,15 @@ class ReasoningEngine:
                     "Consider scalability and constraints",
                     "Produce design specification"
                 ]
+            },
+            "metacognitive": {
+                "keywords": ["#incorrect", "#correct", "limitation", "how do you", "what can you", "explain yourself", "retry", "try again"],
+                "steps": [
+                    "Understand the meta-question or feedback",
+                    "Identify relevant system capabilities or issues",
+                    "Explain reasoning, limitation, or corrective action",
+                    "Provide actionable next steps"
+                ]
             }
         }
 
@@ -81,11 +94,19 @@ class ReasoningEngine:
         """
         query_lower = query.lower()
 
-        # Check each pattern
-        for prob_type, pattern in self.reasoning_patterns.items():
-            for keyword in pattern["keywords"]:
-                if re.search(keyword, query_lower):
-                    return prob_type
+        # Priority check for metacognitive queries (feedback, self-reflection)
+        if query_lower.startswith('#incorrect') or query_lower.startswith('#correct'):
+            return "metacognitive"
+
+        # Check each pattern with priority
+        pattern_priority = ["metacognitive", "math_word_problem", "logic_problem", "programming", "design", "general"]
+
+        for prob_type in pattern_priority:
+            if prob_type in self.reasoning_patterns:
+                pattern = self.reasoning_patterns[prob_type]
+                for keyword in pattern["keywords"]:
+                    if re.search(keyword, query_lower):
+                        return prob_type
 
         # Default to general reasoning
         return "general"
@@ -114,6 +135,8 @@ class ReasoningEngine:
             steps = self._reason_programming_problem(query)
         elif problem_type == "design":
             steps = self._reason_design_problem(query)
+        elif problem_type == "metacognitive":
+            steps = self._reason_metacognitive(query)
         else:
             steps = self._reason_general(query)
 
@@ -121,43 +144,56 @@ class ReasoningEngine:
         return steps
 
     def _reason_math_problem(self, query: str) -> List[ReasoningStep]:
-        """Generate reasoning for math word problems"""
+        """Generate reasoning for math word problems with ACTUAL calculations"""
         steps = []
 
-        # Step 1: Identify given information
-        steps.append(ReasoningStep(
-            step_num=1,
-            description="Identify the given information",
-            calculation="Extract numbers and relationships from the problem"
-        ))
+        # Try to use math reasoner for automatic solving
+        solution = self.math_reasoner.detect_and_solve(query)
 
-        # Step 2: Determine what to calculate
-        steps.append(ReasoningStep(
-            step_num=2,
-            description="Determine what needs to be calculated",
-            calculation="Identify the target variable or question"
-        ))
+        if solution and 'steps' in solution:
+            # Convert MathStep objects to ReasoningStep objects
+            for math_step in solution['steps']:
+                steps.append(ReasoningStep(
+                    step_num=math_step.step_num,
+                    description=math_step.description,
+                    calculation=math_step.calculation if math_step.calculation else math_step.formula,
+                    result=str(math_step.result) if math_step.result else None
+                ))
+            # Store the actual answer for later use
+            self.last_math_answer = solution.get('answer') or solution.get('smaller_item')
+            self.last_math_solution = solution
+        else:
+            # Fall back to generic template with emphasis on showing work
+            steps.append(ReasoningStep(
+                step_num=1,
+                description="Identify the given information",
+                calculation="Extract all numbers and relationships from the problem statement"
+            ))
 
-        # Step 3: Set up relationship
-        steps.append(ReasoningStep(
-            step_num=3,
-            description="Set up the mathematical relationship",
-            calculation="Establish formula or equation"
-        ))
+            steps.append(ReasoningStep(
+                step_num=2,
+                description="Determine what needs to be calculated",
+                calculation="Identify the unknown variable and what formula applies"
+            ))
 
-        # Step 4: Calculate
-        steps.append(ReasoningStep(
-            step_num=4,
-            description="Perform the calculation",
-            calculation="Apply the formula with given values"
-        ))
+            steps.append(ReasoningStep(
+                step_num=3,
+                description="Set up the mathematical relationship",
+                calculation="Write out the equation with variables defined"
+            ))
 
-        # Step 5: Validate
-        steps.append(ReasoningStep(
-            step_num=5,
-            description="Verify the answer",
-            calculation="Check if the result makes logical sense"
-        ))
+            steps.append(ReasoningStep(
+                step_num=4,
+                description="Perform the calculation step-by-step",
+                calculation="Show all arithmetic operations with intermediate results"
+            ))
+
+            steps.append(ReasoningStep(
+                step_num=5,
+                description="Verify the answer",
+                calculation="Substitute back into original constraints to check correctness"
+            ))
+            self.last_math_answer = None
 
         return steps
 
@@ -260,6 +296,36 @@ class ReasoningEngine:
             step_num=5,
             description="Produce design specification",
             calculation="Document the architecture"
+        ))
+
+        return steps
+
+    def _reason_metacognitive(self, query: str) -> List[ReasoningStep]:
+        """Generate reasoning for metacognitive/feedback queries"""
+        steps = []
+
+        steps.append(ReasoningStep(
+            step_num=1,
+            description="Understand the meta-question or feedback",
+            calculation="Is this feedback on a previous response, a question about capabilities, or a request for retry?"
+        ))
+
+        steps.append(ReasoningStep(
+            step_num=2,
+            description="Identify relevant system capabilities or issues",
+            calculation="What aspects of Genesis are relevant: memory, reasoning, external sources, limitations?"
+        ))
+
+        steps.append(ReasoningStep(
+            step_num=3,
+            description="Analyze what went wrong or what's being asked",
+            calculation="If feedback: identify error type. If capability question: list relevant features (persistent memory, pruning, context handling, fallback chain)"
+        ))
+
+        steps.append(ReasoningStep(
+            step_num=4,
+            description="Formulate corrective action or explanation",
+            calculation="Provide actionable next steps: retry with corrections, explain limitation with workarounds, or describe capability with examples"
         ))
 
         return steps
@@ -434,3 +500,29 @@ class ReasoningEngine:
     def clear_trace(self):
         """Clear current reasoning trace"""
         self.current_trace = []
+
+    def get_calculated_answer(self) -> Optional[str]:
+        """
+        Get the calculated answer from math reasoner if available
+
+        Returns:
+            Calculated answer as string or None
+        """
+        if self.last_math_answer is not None:
+            # Format the answer nicely
+            if self.last_math_solution:
+                # Check solution type
+                if 'solution' in self.last_math_solution:
+                    # Logic puzzle solution
+                    sol = self.last_math_solution['solution']
+                    if isinstance(sol, dict) and 'procedure' in sol:
+                        # Format procedure list
+                        return "\n".join(sol['procedure']) + "\n\n" + \
+                               "Identification:\n" + \
+                               "\n".join(f"  {k}: {v}" for k, v in sol.get('identification', {}).items())
+                    return str(sol)
+                elif 'smaller_item' in self.last_math_solution:
+                    # Difference problem (bat and ball)
+                    return f"${self.last_math_solution['smaller_item']:.2f}"
+            return str(self.last_math_answer)
+        return None

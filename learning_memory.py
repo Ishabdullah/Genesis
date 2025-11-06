@@ -410,3 +410,38 @@ Commands: #memory | #prune_memory | #export_memory
             List of recent learning entries
         """
         return self.learning_log["entries"][-count:]
+
+    def add_feedback_note(self, query: str, note: str, is_correct: bool):
+        """
+        Add feedback note to learning memory
+
+        Args:
+            query: The query that was evaluated
+            note: Feedback note from user
+            is_correct: Whether feedback was positive
+
+        """
+        with self._lock:
+            # Find matching conversation in memory
+            for conv in reversed(self.conversation_memory["conversations"]):
+                if conv["user_input"] == query:
+                    # Add feedback note to conversation
+                    if "metadata" not in conv:
+                        conv["metadata"] = {}
+                    conv["metadata"]["feedback_note"] = note
+                    conv["metadata"]["feedback_correct"] = is_correct
+                    conv["metadata"]["feedback_timestamp"] = datetime.now().isoformat()
+                    break
+
+            # Add to learning log
+            self.learning_log["entries"].append({
+                "timestamp": datetime.now().isoformat(),
+                "type": "feedback_note",
+                "query": query[:200],
+                "note": note,
+                "is_correct": is_correct
+            })
+
+            # Save both files
+            self._save_conversation_memory()
+            self._save_learning_log()

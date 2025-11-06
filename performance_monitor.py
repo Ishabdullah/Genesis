@@ -214,12 +214,16 @@ class PerformanceMonitor:
 
         self._save_metrics()
 
-    def record_feedback(self, is_correct: bool):
+    def record_feedback(self, is_correct: bool, note: Optional[str] = None):
         """
-        Record user feedback for last response
+        Record user feedback for last response with optional note
 
         Args:
             is_correct: True if user marked response as correct
+            note: Optional feedback note from user
+
+        Returns:
+            Feedback type string
         """
         feedback_type = "correct" if is_correct else "incorrect"
 
@@ -227,9 +231,11 @@ class PerformanceMonitor:
             # Update feedback counts
             self.metrics["feedback"][feedback_type] += 1
 
-            # Update last query with feedback
+            # Update last query with feedback and note
             if self.metrics["queries"]:
                 self.metrics["queries"][-1]["feedback"] = feedback_type
+                if note:
+                    self.metrics["queries"][-1]["feedback_note"] = note
 
         self._save_metrics()
 

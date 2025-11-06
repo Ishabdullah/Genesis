@@ -573,6 +573,174 @@
       "confidence_score": 1.0,
       "error": null,
       "feedback": "incorrect"
+    },
+    {
+      "id": "q_1762396375889",
+      "timestamp": "2025-11-05T21:34:10.770893",
+      "user_input": "Explain how a candle and a star are similar, then explain how they are completely different.",
+      "response_time_ms": 74881.14,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 0.7,
+      "error": null,
+      "source": "local",
+      "feedback": null
+    },
+    {
+      "id": "q_1762396530836",
+      "timestamp": "2025-11-05T21:36:12.299776",
+      "user_input": "continue",
+      "response_time_ms": 41463.37,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 0.7,
+      "error": null,
+      "source": "local",
+      "feedback": "correct"
+    },
+    {
+      "id": "q_1762396651244",
+      "timestamp": "2025-11-05T21:37:57.860700",
+      "user_input": "A person starts baking bread at 3 PM. It takes 30 minutes to mix, 1 hour to rise, and 45 minutes to bake. When will the bread be done?",
+      "response_time_ms": 26616.06,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": null
+    },
+    {
+      "id": "q_1762396838883",
+      "timestamp": "2025-11-05T21:42:05.454754",
+      "user_input": "#incorrect - the correct answer is 5:15 PM theres 60 minutes in a hour",
+      "response_time_ms": 86570.85,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": "correct"
+    },
+    {
+      "id": "q_1762397545644",
+      "timestamp": "2025-11-05T21:53:08.364776",
+      "user_input": "If 5 machines can make 5 widgets in 5 minutes, how many machines are needed to make 100 widgets in 100 minutes?",
+      "response_time_ms": 42720.23,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": "incorrect"
+    },
+    {
+      "id": "q_1762397722979",
+      "timestamp": "2025-11-05T21:55:41.571050",
+      "user_input": "A farmer has 17 sheep and all but 9 run away. How many are left?",
+      "response_time_ms": 18591.09,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": "incorrect"
+    },
+    {
+      "id": "q_1762397791292",
+      "timestamp": "2025-11-05T21:57:17.433469",
+      "user_input": "You\u2019re in a room with 3 light switches outside and 3 bulbs inside. You can only go in once. How do you tell which switch controls which bulb?",
+      "response_time_ms": 46140.96,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": "incorrect"
+    },
+    {
+      "id": "q_1762397916594",
+      "timestamp": "2025-11-05T21:59:04.890467",
+      "user_input": "A bat and a ball cost $1.10 in total. The bat costs $1 more than the ball. How much does the ball cost?",
+      "response_time_ms": 28296.0,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": "incorrect"
+    },
+    {
+      "id": "q_1762398352929",
+      "timestamp": "2025-11-05T22:07:09.974216",
+      "user_input": "If you could teach yourself one new skill instantly, what would it be \u2014 and why would it help you reason better?",
+      "response_time_ms": 77045.09,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": null
+    },
+    {
+      "id": "q_1762398578177",
+      "timestamp": "2025-11-05T22:10:40.107486",
+      "user_input": "Explain how you would differentiate between correlation and causation when analyzing data.",
+      "response_time_ms": 61930.02,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": "correct"
+    },
+    {
+      "id": "q_1762398730769",
+      "timestamp": "2025-11-05T22:12:54.048817",
+      "user_input": "Why might an AI misinterpret sarcasm, and how could you design a system to detect it better?",
+      "response_time_ms": 43279.42,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": "correct"
+    },
+    {
+      "id": "q_1762398867246",
+      "timestamp": "2025-11-05T22:16:22.670719",
+      "user_input": "Design a sorting algorithm that prioritizes even numbers before odd numbers but keeps each group sorted in ascending order.",
+      "response_time_ms": 115424.69,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 0.7,
+      "error": null,
+      "source": "local",
+      "feedback": "correct"
+    },
+    {
+      "id": "q_1762399214568",
+      "timestamp": "2025-11-05T22:21:18.577999",
+      "user_input": "Describe one limitation in your reasoning ability and one method you could use to detect when you\u2019re about to make that mistake.",
+      "response_time_ms": 64009.17,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": "correct"
+    },
+    {
+      "id": "q_1762399445948",
+      "timestamp": "2025-11-05T22:24:47.310945",
+      "user_input": "If I tell you \u2018#incorrect\u2019, how should you decide whether to attempt the same question again or ask for clarification first?",
+      "response_time_ms": 41361.98,
+      "was_direct_command": false,
+      "had_fallback": false,
+      "confidence_score": 1.0,
+      "error": null,
+      "source": "local",
+      "feedback": null
     }
   ],
   "fallbacks": [
@@ -591,14 +759,14 @@
   ],
   "errors": [],
   "feedback": {
-    "correct": 13,
-    "incorrect": 10
+    "correct": 19,
+    "incorrect": 14
   },
   "statistics": {
-    "total_queries": 52,
+    "total_queries": 66,
     "total_fallbacks": 2,
     "total_errors": 0,
-    "avg_response_time_ms": 27949.45
+    "avg_response_time_ms": 33662.14
   },
   "session_start": "2025-11-05T13:31:48.865827"
 }

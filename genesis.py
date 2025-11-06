@@ -21,6 +21,7 @@ from performance_monitor import PerformanceMonitor
 from learning_memory import LearningMemory
 from reasoning import ReasoningEngine
 from thinking_trace import ThinkingTrace
+from debug_logger import DebugLogger
 
 # ANSI color codes for terminal output
 class Colors:
@@ -50,6 +51,7 @@ class Genesis:
         self.learning = LearningMemory()
         self.reasoning = ReasoningEngine()
         self.thinking_trace = ThinkingTrace(show_live=True, delay=0.3)
+        self.debug_logger = DebugLogger()
         self.llama_path = "./llama.cpp/llama-cli"
         self.model_path = "./models/CodeLlama-7B-Instruct.Q4_K_M.gguf"
         self.running = True
@@ -666,16 +668,43 @@ Rules:
             print(self.performance.get_performance_summary())
             return
 
-        if user_input.lower() == "#correct":
-            feedback = self.performance.record_feedback(is_correct=True)
-            print(f"\n{Colors.GREEN}✓ Last response marked as correct{Colors.RESET}")
-            print(f"{Colors.DIM}Thank you for the feedback!{Colors.RESET}\n")
-            return
+        # Handle feedback with optional notes (e.g., "#correct — good work" or "#incorrect — wrong calculation")
+        if user_input.lower().startswith("#correct") or user_input.lower().startswith("#incorrect"):
+            # Parse feedback and note
+            parts = user_input.split("—", 1)
+            feedback_type = parts[0].strip().lower()
+            note = parts[1].strip() if len(parts) > 1 else None
 
-        if user_input.lower() == "#incorrect":
-            feedback = self.performance.record_feedback(is_correct=False)
-            print(f"\n{Colors.RED}✗ Last response marked as incorrect{Colors.RESET}")
-            print(f"{Colors.DIM}Thank you for the feedback! I'll learn from this.{Colors.RESET}\n")
+            is_correct = (feedback_type == "#correct")
+
+            # Record feedback with note
+            feedback = self.performance.record_feedback(is_correct=is_correct, note=note)
+
+            # Store note in last query metadata if available
+            if self.last_user_query and note:
+                # Add note to context stack entry
+                if self.context_stack:
+                    self.context_stack[-1]['feedback_note'] = note
+
+                # Add note to learning memory
+                self.learning.add_feedback_note(self.last_user_query, note, is_correct)
+
+            # Display confirmation
+            if is_correct:
+                print(f"\n{Colors.GREEN}✓ Last response marked as correct{Colors.RESET}")
+            else:
+                print(f"\n{Colors.RED}✗ Last response marked as incorrect{Colors.RESET}")
+
+            if note:
+                print(f"{Colors.YELLOW}📝 Note: {note}{Colors.RESET}")
+                print(f"{Colors.DIM}Feedback and note stored for future learning.{Colors.RESET}\n")
+
+                # If marked incorrect with a note, offer to retry
+                if not is_correct and self.last_user_query:
+                    print(f"{Colors.CYAN}💡 Tip: Type 'try again' to retry with corrections, or ask a clarifying question.{Colors.RESET}\n")
+            else:
+                print(f"{Colors.DIM}Thank you for the feedback!{Colors.RESET}\n")
+
             return
 
         if user_input.lower() == "#reset_metrics":
@@ -772,6 +801,15 @@ Rules:
             # Step 1: Try Perplexity
             success, perplexity_result = self.tools.ask_perplexity(user_input)
 
+            # Log fallback attempt
+            self.debug_logger.log_fallback_attempt(
+                query=user_input,
+                local_confidence=uncertainty_analysis['confidence_score'],
+                source="perplexity",
+                success=success,
+                error_msg=None if success else perplexity_result
+            )
+
             if success:
                 print(f"{Colors.GREEN}✓ Perplexity consultation successful{Colors.RESET}\n")
                 perplexity_response = perplexity_result
@@ -862,8 +900,16 @@ Rules:
                 )
 
         # Validate reasoning before displaying final answer
-        # Priority: Perplexity > Claude > Local
-        if perplexity_response:
+        # Priority: Calculated Math Answer > Perplexity > Claude > Local LLM
+
+        # Check if we have a calculated answer from math reasoner
+        calculated_answer = self.reasoning.get_calculated_answer()
+
+        if calculated_answer:
+            # Use the calculated answer (it's deterministic and correct)
+            final_response = calculated_answer
+            response_source = "local_calculated"
+        elif perplexity_response:
             final_response = perplexity_response
         elif claude_response:
             final_response = claude_response
