@@ -264,8 +264,8 @@ p4a.branch = master
 #p4a.source_dir =
 
 # (str) The directory in which python-for-android should look for your own build recipes (if any)
-# Not needed - p4a master now uses libffi 3.4.2 which has fixed autoconf issues
-#p4a.local_recipes = ./p4a-recipes
+# Using custom libffi recipe with official release (has pre-generated configure)
+p4a.local_recipes = ./p4a-recipes
 
 # (str) Filename to the hook for p4a
 # Not needed - p4a master now uses libffi 3.4.2 which should work

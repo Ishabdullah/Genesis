@@ -95,23 +95,45 @@ This file tracks all attempted fixes for the Genesis Android APK build issues.
 - **This means:** ALL our patching attempts were unnecessary - p4a already upgraded libffi!
 - **The real problem:** Our `p4a.local_recipes` setting was interfering with normal p4a operation
 
-### Attempt 10: Let p4a Use Default libffi 3.4.2 ⭐ THE FIX
+### Attempt 10: Let p4a Use Default libffi 3.4.2
 - **Date:** 2025-11-07
 - **Config:** NDK 28c, p4a master, NO custom recipes or hooks
-- **Status:** 🔄 IN PROGRESS (Build #19)
+- **Result:** ❌ FAILED - libffi 3.4.2 ALSO has LT_SYS_SYMBOL_USCORE! (Build #19)
 - **Approach:** Remove all custom overrides and let p4a work normally
   - Removed `p4a.local_recipes = ./p4a-recipes`
   - Removed `p4a.hook = p4a_hook.py`
   - Let p4a use its default libffi 3.4.2 recipe
-- **Why this should work:**
-  - p4a master already has libffi 3.4.2 in its recipes
-  - libffi 3.4.2 has modern configure.ac compatible with autoconf 2.71+
-  - No obsolete macros, no patching needed
-  - Our custom overrides were preventing normal operation
+- **Why it failed:**
+  - libffi 3.4.2 configure.ac **STILL contains LT_SYS_SYMBOL_USCORE** at line 215!
+  - p4a downloads GitHub archive (no pre-generated configure)
+  - Must run autogen.sh which calls autoreconf
+  - Modern autoconf 2.71 doesn't have this obsolete macro
+  - Same error as all previous attempts
 - **Lesson learned:**
-  - Always check what version p4a is actually using!
-  - We spent 8 attempts trying to fix an already-fixed issue
-  - The problem was our attempted solutions, not the base p4a setup
+  - Even "modern" libffi 3.4.2 has this compatibility issue
+  - GitHub archive tarballs lack pre-generated configure scripts
+  - Must either patch configure.ac OR use official release tarball
+
+### Attempt 11: Use Official libffi Release (Not GitHub Archive) 🎁 SMART SOLUTION
+- **Date:** 2025-11-07
+- **Config:** NDK 28c, custom p4a recipe using libffi 3.4.4 official release
+- **Status:** 🔄 IN PROGRESS (Build #20)
+- **Approach:** Use official release tarball instead of GitHub archive
+  - Created custom recipe: `p4a-recipes/libffi/__init__.py`
+  - Override URL: `https://github.com/libffi/libffi/releases/download/v3.4.4/libffi-3.4.4.tar.gz`
+  - Official releases include **pre-generated configure** script!
+  - No need to run autogen.sh, no autoconf issues
+  - Set `p4a.local_recipes = ./p4a-recipes`
+- **Why this should work:**
+  - Official release tarballs include generated files (configure, Makefile.in)
+  - p4a's LibffiRecipe will use pre-generated configure if available
+  - Skips autogen.sh entirely, avoiding all autoconf/automake issues
+  - libffi 3.4.4 is latest stable (March 2023), more recent than 3.4.2
+- **Technical details:**
+  - GitHub archive: `/archive/v3.4.2.tar.gz` - source only, no generated files
+  - Official release: `/releases/download/v3.4.4/libffi-3.4.4.tar.gz` - includes configure
+  - p4a checks if configure exists before running autogen.sh
+- **Hypothesis:** Pre-generated configure bypasses entire autoconf incompatibility!
 
 ## ⚠️ ROOT CAUSE IDENTIFIED (Updated After Attempt #9)
 
@@ -173,11 +195,11 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
 
 ## 📊 CURRENT STATUS
 
-**Total Attempts**: 10
-**Success Rate**: 0/9 (Attempt #10 in progress)
-**Previous Blocker**: RESOLVED! ✅ p4a master now uses libffi 3.4.2
-**Root Cause of Failures**: Our custom overrides (p4a.local_recipes) were interfering
-**Current Strategy**: Let p4a use default libffi 3.4.2 - no custom patches needed
+**Total Attempts**: 11
+**Success Rate**: 0/10 (Attempt #11 in progress - Build #20)
+**Root Cause**: GitHub archive libffi lacks pre-generated configure, must run autogen.sh with modern autoconf
+**Blocker**: LT_SYS_SYMBOL_USCORE macro obsolete in autoconf 2.71+ (Ubuntu 24.04)
+**Current Strategy**: Use official libffi 3.4.4 release tarball (has pre-generated configure, skips autogen.sh)
 
 ## Build Configuration Summary
 
