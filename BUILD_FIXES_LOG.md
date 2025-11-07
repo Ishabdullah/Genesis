@@ -44,8 +44,17 @@ This file tracks all attempted fixes for the Genesis Android APK build issues.
 ### Attempt 6: Use p4a develop branch with NDK 28c
 - **Date:** 2025-11-07
 - **Config:** NDK 28c, p4a develop branch, autoconf-archive + ACLOCAL_PATH export
+- **Result:** ❌ FAILED - libffi autoconf error (LT_SYS_SYMBOL_USCORE undefined)
+- **Reason:** develop branch uses Python 3.14 but has same libffi version with same autoconf issues
+- **Note:** develop branch is too bleeding edge, same libffi problem persists
+
+### Attempt 7: Remove pyjnius dependency
+- **Date:** 2025-11-07
+- **Config:** NDK 28c, p4a master branch, requirements WITHOUT pyjnius
 - **Status:** 🔄 IN PROGRESS
-- **Hypothesis:** develop branch may have newer libffi version or patches for this autoconf issue
+- **Changes:** Removed pyjnius from requirements (keeps python3, kivy, android, plyer)
+- **Trade-off:** Loses Java bridge functionality, but plyer should still provide basic Android APIs
+- **Hypothesis:** Python3 still needs libffi for ctypes, but may use system libffi instead of building it
 
 ## Build Configuration Summary
 

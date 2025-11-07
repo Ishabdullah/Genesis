@@ -33,9 +33,8 @@ version = 2.3.0
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-# Note: Only include packages compatible with Python-for-Android
-# Simplified to core packages to avoid libffi issues
-requirements = python3,kivy,pyjnius,android,plyer
+# Note: Removing pyjnius to avoid libffi build issues - limits Android API access
+requirements = python3,kivy,android,plyer
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
@@ -258,8 +257,8 @@ android.allow_backup = True
 #p4a.fork = kivy
 
 # (str) python-for-android branch to use, defaults to master
-# Using develop branch - may have newer libffi with autoconf fixes
-p4a.branch = develop
+# Using master branch - develop has Python 3.14 which may cause issues
+p4a.branch = master
 
 # (str) python-for-android git clone directory (if empty, it will be automatically cloned from github)
 #p4a.source_dir =
