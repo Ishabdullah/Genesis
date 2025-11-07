@@ -51,10 +51,86 @@ This file tracks all attempted fixes for the Genesis Android APK build issues.
 ### Attempt 7: Remove pyjnius dependency
 - **Date:** 2025-11-07
 - **Config:** NDK 28c, p4a master branch, requirements WITHOUT pyjnius
+- **Result:** ❌ FAILED - libffi autoconf error (LT_SYS_SYMBOL_USCORE undefined)
+- **Changes:** Removed pyjnius from requirements (kept python3, kivy, android, plyer)
+- **Trade-off:** Lost Java bridge functionality
+- **Reason:** Python3's ctypes module still requires libffi - p4a builds it from source with same error
+- **Conclusion:** Removing pyjnius doesn't help; Python itself needs libffi
+
+### Attempt 8: Custom p4a Recipe with On-the-Fly Patching 🎯 CREATIVE SOLUTION
+- **Date:** 2025-11-07
+- **Config:** NDK 28c, p4a master, custom local recipe that patches libffi source
 - **Status:** 🔄 IN PROGRESS
-- **Changes:** Removed pyjnius from requirements (keeps python3, kivy, android, plyer)
-- **Trade-off:** Loses Java bridge functionality, but plyer should still provide basic Android APIs
-- **Hypothesis:** Python3 still needs libffi for ctypes, but may use system libffi instead of building it
+- **Approach:** **Think Outside the Box!**
+  - Created custom libffi recipe: `p4a-recipes/libffi/__init__.py`
+  - Recipe patches configure.ac BEFORE autogen.sh runs
+  - Removes/replaces the problematic `LT_SYS_SYMBOL_USCORE` macro
+  - Defaults to modern system behavior (no underscore prefix)
+- **How it works:**
+  1. p4a loads our custom recipe (via `p4a.local_recipes`)
+  2. Before building, recipe reads configure.ac
+  3. Patches out the obsolete macro usage
+  4. Continues with normal build process
+- **Hypothesis:** By patching the source during build, we bypass the autoconf incompatibility entirely
+
+## ⚠️ ROOT CAUSE IDENTIFIED
+
+After 7 comprehensive attempts, the root cause is clear:
+
+**python-for-android's libffi recipe uses an outdated libffi version (likely 3.2.1 or similar) that contains obsolete autoconf macros (`LT_SYS_SYMBOL_USCORE`) which are incompatible with modern autoconf/autotools.**
+
+The macro was removed from libtool in newer versions, but libffi's old configure.ac still references it. Even with autoconf-archive installed and ACLOCAL_PATH configured, the macro cannot be found because it simply doesn't exist in modern toolchains.
+
+### Why All Standard Approaches Failed:
+
+1. **NDK versions (r21e, 25c, 28c)**: All use modern autotools
+2. **autoconf-archive package**: Doesn't contain this obsolete macro
+3. **ACLOCAL_PATH configuration**: Can't find what doesn't exist
+4. **p4a branches (master/develop)**: Both use same old libffi
+5. **Removing pyjnius**: Python's ctypes still needs libffi
+
+## 🔧 SOLUTION OPTIONS
+
+### Option 1: Patch python-for-android's libffi Recipe ⭐ RECOMMENDED
+This requires modifying p4a's libffi recipe to:
+- Update to libffi 3.4.x (has fixed configure.ac)
+- OR patch the configure.ac to remove LT_SYS_SYMBOL_USCORE macro
+- OR use pre-built libffi from NDK
+
+**How to implement:**
+1. Fork python-for-android
+2. Update `pythonforandroid/recipes/libffi/__init__.py`
+3. Point buildozer.spec to your fork: `p4a.fork = yourusername`
+
+### Option 2: Report Upstream & Wait
+File an issue at: https://github.com/kivy/python-for-android/issues
+
+Search first - this may already be reported. If it is, add details about NDK 28c incompatibility.
+
+### Option 3: Use Pre-Built APK Solution
+Build on a local machine with:
+- Older Linux distribution (Ubuntu 20.04 with older autotools)
+- Or use Docker with controlled autoconf version
+
+### Option 4: Alternative Build Tools
+- **Chaquopy**: Commercial Python-Android tool with better dependency management
+- **BeeWare Briefcase**: Free, modern Python mobile framework
+- **Termux**: Build directly on Android device
+
+## 📝 RECOMMENDATIONS FOR THIS PROJECT
+
+Given the Genesis app's complexity and need for Android APIs, I recommend:
+
+1. **Short-term**: Report this issue to python-for-android maintainers
+2. **Medium-term**: Create a custom p4a recipe fork with updated libffi
+3. **Long-term**: Consider migrating to BeeWare/Briefcase for better mobile support
+
+## 📊 FINAL SUMMARY
+
+**Total Attempts**: 7
+**Success Rate**: 0/7
+**Blocker**: python-for-android libffi recipe incompatibility with modern autotools
+**Status**: Requires upstream fix or custom p4a fork
 
 ## Build Configuration Summary
 

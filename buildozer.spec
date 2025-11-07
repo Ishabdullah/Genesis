@@ -33,8 +33,8 @@ version = 2.3.0
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-# Note: Removing pyjnius to avoid libffi build issues - limits Android API access
-requirements = python3,kivy,android,plyer
+# Note: Restored pyjnius - using custom libffi recipe to fix build
+requirements = python3,kivy,pyjnius,android,plyer
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
@@ -264,7 +264,8 @@ p4a.branch = master
 #p4a.source_dir =
 
 # (str) The directory in which python-for-android should look for your own build recipes (if any)
-#p4a.local_recipes =
+# Using local patched libffi recipe to fix autoconf compatibility
+p4a.local_recipes = ./p4a-recipes
 
 # (str) Filename to the hook for p4a
 #p4a.hook =
