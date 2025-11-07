@@ -34,7 +34,8 @@ version = 2.3.0
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
 # Note: Only include packages compatible with Python-for-Android
-requirements = python3,kivy,pillow,requests,certifi,urllib3,pyjnius,android,plyer
+# Simplified to core packages to avoid libffi issues
+requirements = python3,kivy,pyjnius,android,plyer
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
@@ -101,7 +102,8 @@ android.minapi = 21
 android.sdk = 33
 
 # (str) Android NDK version to use
-android.ndk = 26b
+# Using r21e - most stable version for Kivy builds
+android.ndk = r21e
 
 # (bool) Use --private data storage (True) or --dir public storage (False)
 android.private_storage = True
@@ -256,8 +258,8 @@ android.allow_backup = True
 #p4a.fork = kivy
 
 # (str) python-for-android branch to use, defaults to master
-# Using master branch with NDK 26b for best compatibility
-p4a.branch = master
+# Using develop branch for better compatibility with NDK r21e
+p4a.branch = develop
 
 # (str) python-for-android git clone directory (if empty, it will be automatically cloned from github)
 #p4a.source_dir =
