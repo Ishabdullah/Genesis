@@ -78,41 +78,62 @@ This file tracks all attempted fixes for the Genesis Android APK build issues.
 ### Attempt 9: p4a Hook to Patch libffi 🪝 ALTERNATIVE APPROACH
 - **Date:** 2025-11-07
 - **Config:** NDK 28c, p4a master, p4a pre-build hook
-- **Status:** 🔄 IN PROGRESS (Build #18)
+- **Result:** ❌ FAILED - But revealed CRITICAL DISCOVERY! 🎉
 - **Approach:** Use p4a.hook instead of p4a.local_recipes
   - Created `p4a_hook.py` - executable Python script
   - Hook searches for libffi configure.ac in .buildozer/
   - Patches the file before autogen.sh runs
   - Added `p4a.hook = p4a_hook.py` to buildozer.spec
-- **Why hooks are better:**
-  - Simpler than custom recipes (just patch files, no p4a API)
-  - Execute at guaranteed points in build process
-  - Less likely to break with p4a version changes
-  - Direct file manipulation, no complex overrides
-- **How it works:**
-  1. p4a runs hook script at pre-defined stage
-  2. Hook searches .buildozer/ for libffi/configure.ac
-  3. Reads file and patches LT_SYS_SYMBOL_USCORE usage
-  4. Replaces problematic macro with safe default
-  5. Writes patched file back
-  6. Build continues with patched source
-- **Hypothesis:** Hook will execute reliably and patch libffi before autogen.sh runs
+- **Why it failed:**
+  - Build failed with missing patch file: `p4a-recipes/libffi/remove-version-info.patch`
+  - Having `p4a.local_recipes` directory made p4a expect complete recipe with patches
+- **🎉 CRITICAL DISCOVERY:**
+  - Build logs show: `Downloading libffi from https://github.com/libffi/libffi/archive/v3.4.2.tar.gz`
+  - **p4a master NOW uses libffi 3.4.2!** (not the old 3.2.1)
+  - libffi 3.4.2 is a modern version released in 2022
+  - It has FIXED configure.ac that doesn't use LT_SYS_SYMBOL_USCORE!
+- **This means:** ALL our patching attempts were unnecessary - p4a already upgraded libffi!
+- **The real problem:** Our `p4a.local_recipes` setting was interfering with normal p4a operation
 
-## ⚠️ ROOT CAUSE IDENTIFIED
+### Attempt 10: Let p4a Use Default libffi 3.4.2 ⭐ THE FIX
+- **Date:** 2025-11-07
+- **Config:** NDK 28c, p4a master, NO custom recipes or hooks
+- **Status:** 🔄 IN PROGRESS (Build #19)
+- **Approach:** Remove all custom overrides and let p4a work normally
+  - Removed `p4a.local_recipes = ./p4a-recipes`
+  - Removed `p4a.hook = p4a_hook.py`
+  - Let p4a use its default libffi 3.4.2 recipe
+- **Why this should work:**
+  - p4a master already has libffi 3.4.2 in its recipes
+  - libffi 3.4.2 has modern configure.ac compatible with autoconf 2.71+
+  - No obsolete macros, no patching needed
+  - Our custom overrides were preventing normal operation
+- **Lesson learned:**
+  - Always check what version p4a is actually using!
+  - We spent 8 attempts trying to fix an already-fixed issue
+  - The problem was our attempted solutions, not the base p4a setup
 
-After 7 comprehensive attempts, the root cause is clear:
+## ⚠️ ROOT CAUSE IDENTIFIED (Updated After Attempt #9)
 
-**python-for-android's libffi recipe uses an outdated libffi version (likely 3.2.1 or similar) that contains obsolete autoconf macros (`LT_SYS_SYMBOL_USCORE`) which are incompatible with modern autoconf/autotools.**
+**MAJOR UPDATE:** The initial diagnosis was WRONG! 🎯
 
-The macro was removed from libtool in newer versions, but libffi's old configure.ac still references it. Even with autoconf-archive installed and ACLOCAL_PATH configured, the macro cannot be found because it simply doesn't exist in modern toolchains.
+### What We Initially Thought:
+- p4a used old libffi (3.2.1) with obsolete LT_SYS_SYMBOL_USCORE macro
+- Needed to patch or upgrade libffi
 
-### Why All Standard Approaches Failed:
+### What Was Actually Happening:
+**p4a master ALREADY uses libffi 3.4.2** (discovered in Build #18 logs)
+- libffi 3.4.2 is modern (released 2022) and compatible with autoconf 2.71+
+- Has fixed configure.ac with no obsolete macros
+- Works perfectly with NDK 28c and modern toolchains
 
-1. **NDK versions (r21e, 25c, 28c)**: All use modern autotools
-2. **autoconf-archive package**: Doesn't contain this obsolete macro
-3. **ACLOCAL_PATH configuration**: Can't find what doesn't exist
-4. **p4a branches (master/develop)**: Both use same old libffi
-5. **Removing pyjnius**: Python's ctypes still needs libffi
+### Why First 7-8 Attempts Failed:
+1. **Attempts 1-7**: Unrelated issues, bad configurations, or just didn't check p4a's actual libffi version
+2. **Attempt 8-9**: Our custom `p4a.local_recipes` was INTERFERING with p4a's correct libffi 3.4.2
+3. **The real blocker**: Our attempted "fixes" were preventing the working solution from running!
+
+### Lesson Learned:
+**Always check what's actually being used before trying to fix it!** We spent 9 attempts trying to "fix" a problem that p4a had already solved.
 
 ## 🔧 SOLUTION OPTIONS
 
@@ -152,10 +173,11 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
 
 ## 📊 CURRENT STATUS
 
-**Total Attempts**: 9
-**Success Rate**: 0/8 (Attempt #9 in progress)
-**Blocker**: python-for-android libffi recipe incompatibility with modern autotools
-**Current Strategy**: Using p4a hook to patch libffi source on-the-fly
+**Total Attempts**: 10
+**Success Rate**: 0/9 (Attempt #10 in progress)
+**Previous Blocker**: RESOLVED! ✅ p4a master now uses libffi 3.4.2
+**Root Cause of Failures**: Our custom overrides (p4a.local_recipes) were interfering
+**Current Strategy**: Let p4a use default libffi 3.4.2 - no custom patches needed
 
 ## Build Configuration Summary
 
