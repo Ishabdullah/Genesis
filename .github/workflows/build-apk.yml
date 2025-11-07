@@ -53,6 +53,7 @@ jobs:
             xsel \
             openjdk-17-jdk \
             autoconf \
+            autoconf-archive \
             automake \
             libtool \
             pkg-config \
