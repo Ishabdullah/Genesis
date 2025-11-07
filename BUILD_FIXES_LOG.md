@@ -60,7 +60,7 @@ This file tracks all attempted fixes for the Genesis Android APK build issues.
 ### Attempt 8: Custom p4a Recipe with On-the-Fly Patching 🎯 CREATIVE SOLUTION
 - **Date:** 2025-11-07
 - **Config:** NDK 28c, p4a master, custom local recipe that patches libffi source
-- **Status:** 🔄 IN PROGRESS
+- **Result:** ❌ FAILED - Recipe never loaded/executed
 - **Approach:** **Think Outside the Box!**
   - Created custom libffi recipe: `p4a-recipes/libffi/__init__.py`
   - Recipe patches configure.ac BEFORE autogen.sh runs
@@ -71,7 +71,32 @@ This file tracks all attempted fixes for the Genesis Android APK build issues.
   2. Before building, recipe reads configure.ac
   3. Patches out the obsolete macro usage
   4. Continues with normal build process
-- **Hypothesis:** By patching the source during build, we bypass the autoconf incompatibility entirely
+- **Why it failed:** Build logs show no patch messages - recipe didn't execute
+- **Reason:** p4a local recipes have specific structure requirements that our recipe didn't meet
+- **Lesson:** p4a recipes need exact API compatibility, hooks are more reliable
+
+### Attempt 9: p4a Hook to Patch libffi 🪝 ALTERNATIVE APPROACH
+- **Date:** 2025-11-07
+- **Config:** NDK 28c, p4a master, p4a pre-build hook
+- **Status:** 🔄 IN PROGRESS (Build #18)
+- **Approach:** Use p4a.hook instead of p4a.local_recipes
+  - Created `p4a_hook.py` - executable Python script
+  - Hook searches for libffi configure.ac in .buildozer/
+  - Patches the file before autogen.sh runs
+  - Added `p4a.hook = p4a_hook.py` to buildozer.spec
+- **Why hooks are better:**
+  - Simpler than custom recipes (just patch files, no p4a API)
+  - Execute at guaranteed points in build process
+  - Less likely to break with p4a version changes
+  - Direct file manipulation, no complex overrides
+- **How it works:**
+  1. p4a runs hook script at pre-defined stage
+  2. Hook searches .buildozer/ for libffi/configure.ac
+  3. Reads file and patches LT_SYS_SYMBOL_USCORE usage
+  4. Replaces problematic macro with safe default
+  5. Writes patched file back
+  6. Build continues with patched source
+- **Hypothesis:** Hook will execute reliably and patch libffi before autogen.sh runs
 
 ## ⚠️ ROOT CAUSE IDENTIFIED
 
@@ -125,12 +150,12 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
 2. **Medium-term**: Create a custom p4a recipe fork with updated libffi
 3. **Long-term**: Consider migrating to BeeWare/Briefcase for better mobile support
 
-## 📊 FINAL SUMMARY
+## 📊 CURRENT STATUS
 
-**Total Attempts**: 7
-**Success Rate**: 0/7
+**Total Attempts**: 9
+**Success Rate**: 0/8 (Attempt #9 in progress)
 **Blocker**: python-for-android libffi recipe incompatibility with modern autotools
-**Status**: Requires upstream fix or custom p4a fork
+**Current Strategy**: Using p4a hook to patch libffi source on-the-fly
 
 ## Build Configuration Summary
 

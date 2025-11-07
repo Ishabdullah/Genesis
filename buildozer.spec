@@ -268,7 +268,8 @@ p4a.branch = master
 p4a.local_recipes = ./p4a-recipes
 
 # (str) Filename to the hook for p4a
-#p4a.hook =
+# Using hook to patch libffi configure.ac before build
+p4a.hook = p4a_hook.py
 
 # (str) Bootstrap to use for android builds
 # p4a.bootstrap = sdl2
