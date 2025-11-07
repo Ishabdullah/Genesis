@@ -1,93 +1,79 @@
-# 🧬 Genesis AI Assistant
+# 🧬 Genesis AI Assistant - Android App
 
 <div align="center">
 
 ![Genesis Logo](icon_192.png)
 
-**The World's Most Advanced On-Device AI Assistant for Android**
+**Privacy-First AI Assistant for Android**
 
-[![Version](https://img.shields.io/badge/Version-2.3.0-blue.svg)](https://github.com/Ishabdullah/Genesis)
+[![Version](https://img.shields.io/badge/Version-2.3.0--preview-blue.svg)](https://github.com/Ishabdullah/Genesis)
 [![Platform](https://img.shields.io/badge/Platform-Android%207.0%2B-green.svg)](https://www.android.com)
-[![License](https://img.shields.io/badge/License-MIT-orange.svg)](LICENSE)
-[![Build Status](https://img.shields.io/badge/Build-Automated-brightgreen.svg)](https://github.com/Ishabdullah/Genesis/actions)
+[![Build](https://img.shields.io/badge/Build-Automated-brightgreen.svg)](https://github.com/Ishabdullah/Genesis/actions)
+[![Branch](https://img.shields.io/badge/Branch-claude%2Fgenesis--android--production-orange.svg)](#)
 
-[Download APK](#-download) • [Features](#-features) • [Installation](#-installation) • [Documentation](#-documentation)
+[Download APK](#-download-apk) • [Features](#-features) • [Installation](#-installation) • [Roadmap](#-roadmap)
 
 </div>
 
 ---
 
-## ✨ What is Genesis?
+## 📱 About This Branch
 
-Genesis is a **revolutionary AI assistant** that runs entirely on your Android device. Unlike cloud-based assistants, Genesis gives you:
+This is the **Android App** branch of Genesis - transforming the powerful Termux-based AI workstation into a native Android application with a futuristic UI.
 
-- 🔒 **Complete Privacy** - All processing happens on your device
-- ⚡ **Blazing Speed** - NPU acceleration for instant responses
-- 📱 **Full Device Control** - GPS, camera, flashlight, and more
-- 🎨 **Futuristic UI** - Beautiful neon-themed interface
-- 🧠 **Advanced AI** - Powered by CodeLlama-7B with deterministic math
-- 🌍 **Works Offline** - No internet required for local queries
-
-**No data leaves your device. No subscriptions. No cloud dependency.**
+**Branch:** `claude/genesis-android-production-011CUsnEhM8wFNiRFhG1A4SC`
+**Status:** 🔄 In Development - Preview Version
+**Stage:** Phase 3 Complete - UI Shell Ready
 
 ---
 
-## 🌟 Key Features
+## ✨ What's New in Android Version
 
-### 🚀 Hardware Acceleration
-Genesis intelligently uses your device's processing power:
+### 🎨 Futuristic UI
+- **Neon Theme** - Cyberpunk-inspired cyan/blue color scheme
+- **Custom Widgets** - Styled buttons, inputs, and message bubbles
+- **Smooth Animations** - Polished, responsive interactions
+- **DNA Helix Branding** - Unique app icon and theme
 
-| Mode | Hardware | Speed | Power Efficiency |
-|------|----------|-------|------------------|
-| **NPU** | Qualcomm Hexagon | Instant | 10x more efficient |
-| **GPU** | Vulkan Graphics | 3x faster | Optimized |
-| **CPU** | Universal | Standard | Compatible |
+### 📱 Android-Native Features
+- **Material Design** - Modern Android UI patterns
+- **Gesture Support** - Touch-optimized interface
+- **Dark Theme** - Easy on the eyes
+- **Portrait/Landscape** - Adaptive layout
 
-Real-time acceleration indicator shows which mode is active with color-coded display.
+### 🚀 Preview Capabilities (Current)
+- ✅ Chat interface with message history
+- ✅ Futuristic UI with neon styling
+- ✅ Quick action buttons
+- ✅ Status indicators
+- ✅ Simple conversational responses
 
-### 📱 Complete Device Control
-Control your Android device with natural language:
-
-```
-"Turn on flashlight"          → 🔦 Flashlight enabled
-"What's my location?"         → 📍 GPS coordinates & address
-"Take a photo"                → 📸 Captures and saves image
-"Record 5 seconds of audio"   → 🎤 Records audio file
-"Set brightness to 200"       → ☀️ Adjusts screen brightness
-"Increase volume"             → 🔊 Adjusts audio levels
-```
-
-### 💬 Intelligent Conversation
-- **Multi-turn context** - Remembers previous messages
-- **Deterministic math** - 100% accurate calculations
-- **Code execution** - Runs Python code safely
-- **Web search** - Searches when needed (optional)
-- **File operations** - Read, write, edit files
-
-### 🎨 Futuristic Interface
-- **Neon theme** - Cyan and blue cyberpunk aesthetics
-- **Smooth animations** - Polished, responsive UI
-- **Quick actions** - One-tap access to common features
-- **Status indicators** - Real-time system information
-- **Debug panel** - Developer tools (debug builds only)
+### 🔄 Coming Soon
+- ⏳ Full AI inference (LLM integration)
+- ⏳ Device control (GPS, camera, flashlight)
+- ⏳ NPU/GPU/CPU acceleration
+- ⏳ File operations
+- ⏳ Code execution
+- ⏳ Web search integration
 
 ---
 
-## 📥 Download
+## 📥 Download APK
 
-### Latest Release: v2.3.0
+### Latest Build
 
 **Download from GitHub Actions:**
 1. Go to [Actions Tab](https://github.com/Ishabdullah/Genesis/actions)
 2. Click latest "Build Genesis Android APK" workflow
-3. Download `genesis-ai-apk` from Artifacts
-4. Extract and install APK
+3. Download `genesis-ai-apk` from Artifacts (after build completes)
+4. Extract ZIP and install APK
+
+**Build Status:** Check [GitHub Actions](https://github.com/Ishabdullah/Genesis/actions) for current build status
 
 **Requirements:**
-- Android 7.0 (API 21) or higher
-- 100+ MB storage space
-- 2+ GB RAM recommended
-- ARM processor (arm64-v8a or armeabi-v7a)
+- Android 7.0+ (API 21+)
+- 50+ MB storage
+- ARM 32/64-bit processor
 
 ---
 
@@ -100,464 +86,378 @@ Settings → Security → Install Unknown Apps
 ```
 
 ### Step 2: Install APK
-1. Transfer APK to your Android device
-2. Open file manager and tap the APK
-3. Tap "Install"
-4. Wait for installation to complete
+1. Download APK from GitHub Actions artifacts
+2. Transfer to your Android device
+3. Tap the APK file
+4. Tap "Install"
 
-### Step 3: Grant Permissions
-When you first launch Genesis, grant these permissions:
-- ✅ **Location** - For GPS features
-- ✅ **Camera** - For photo capture
-- ✅ **Microphone** - For audio recording
-- ✅ **Storage** - For file operations
-
-### Step 4: Start Using Genesis!
-Open the app and start chatting. Try:
-- "Hello, what can you do?"
-- "What is 2 + 2?"
-- "Turn on flashlight"
-- Tap quick action buttons
+### Step 3: Launch & Enjoy
+Open Genesis and explore the futuristic UI!
 
 ---
 
-## 💡 Usage Examples
+## 🎯 Current Features
 
-### Basic Conversation
+### ✅ Working Now (Preview v2.3.0)
+
+**UI & Interaction:**
+- 💬 Chat interface with scrollable history
+- 🎨 Futuristic neon theme (cyan/blue)
+- 📝 Message input with validation
+- 🔘 Quick action buttons
+- 📊 Status indicators
+- 🧬 Branded design elements
+
+**Basic Responses:**
+- 👋 Greetings and basic conversation
+- ℹ️ Help information
+- 🔄 Simple echo responses
+- 📱 Feature previews
+
+**Quick Actions:**
+- 📍 **Location** - Preview of GPS integration
+- 📸 **Camera** - Preview of camera control
+- 🔦 **Light** - Preview of flashlight toggle
+- ℹ️ **Info** - App information display
+
+### 🔄 In Development
+
+**AI Core Integration:**
+- 🧠 LLM inference engine
+- 💭 Context-aware responses
+- 🔍 Smart question understanding
+- 📚 Knowledge base
+
+**Device Control:**
+- 📍 Real GPS location
+- 📸 Camera photo capture
+- 🔦 Flashlight on/off
+- 🎤 Audio recording
+- ☀️ Brightness control
+- 🔊 Volume adjustment
+
+**Advanced Features:**
+- ⚡ Hardware acceleration (NPU/GPU/CPU)
+- 🗂️ File operations
+- 💻 Code execution sandbox
+- 🌐 Web search
+- 🎙️ Voice input/output
+
+---
+
+## 🏗️ Development Status
+
+### Phase Progress
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| **Phase 1** | Foundation & Architecture | ✅ Complete |
+| **Phase 2** | Hardware Acceleration | ✅ Complete |
+| **Phase 3** | Build System & UI | ✅ Complete |
+| **Phase 4** | Device Integration | 🔄 Next |
+| **Phase 5** | LLM Integration | ⏳ Pending |
+| **Phase 6-12** | Advanced Features | ⏳ Pending |
+
+**Overall Progress:** ~25% (Phase 3 of 12)
+
+### What's Done ✅
+
+- [x] Futuristic Android UI built
+- [x] GitHub Actions build pipeline
+- [x] App icon and branding
+- [x] Custom styled widgets
+- [x] Chat interface functional
+- [x] Quick action buttons
+- [x] Status indicators
+- [x] Build automation
+
+### What's Next 🔄
+
+- [ ] Integrate LLM inference
+- [ ] Add device control APIs
+- [ ] Implement hardware acceleration
+- [ ] Package AI model
+- [ ] Add voice support
+- [ ] File operations UI
+- [ ] Settings screen
+- [ ] Performance optimization
+
+---
+
+## 🎨 Screenshots
+
+### Main Interface
 ```
-You: Hello!
-Genesis: Hello! I'm Genesis, your AI assistant. I can help with:
-         • Answering questions and solving problems
-         • Controlling device features (camera, GPS, flashlight)
-         • Performing calculations and running code
-         • And much more!
-
-You: What is 15 * 24?
-Genesis: 15 × 24 = 360
-```
-
-### Device Control
-```
-You: What's my location?
-Genesis: Your current location:
-         Latitude: 37.7749° N
-         Longitude: 122.4194° W
-         Address: San Francisco, CA, USA
-
-You: Take a selfie
-Genesis: Photo captured successfully!
-         Saved to: /storage/emulated/0/Genesis/media/photo_20251107_152345.jpg
-```
-
-### Quick Actions
-Tap the buttons at the bottom for instant access:
-- 📍 **Location** - Get GPS coordinates
-- 📸 **Camera** - Take a photo
-- 🔦 **Light** - Toggle flashlight
-- ⚡ **Accel** - Check acceleration mode
-
-### Advanced Features
-```
-You: Calculate the square root of 144
-Genesis: √144 = 12
-
-You: Execute Python code: print("Hello, World!")
-Genesis: Code executed successfully:
-         Output: Hello, World!
-
-You: #debug status  (in debug builds only)
-Genesis: System Status:
-         Python: 3.11.6
-         Acceleration: NPU
-         Memory: 125.3 MB
-         ...
+┌─────────────────────────────────┐
+│  🧬 GENESIS    │ ● READY       │
+├─────────────────────────────────┤
+│                                  │
+│  🧬 Welcome to Genesis!          │
+│     This is the Android preview  │
+│                                  │
+│  👤 Hello!                       │
+│                                  │
+│  🧬 Hello! I'm Genesis, your     │
+│     AI assistant. Full           │
+│     capabilities coming soon!    │
+│                                  │
+├─────────────────────────────────┤
+│ 📍   📸   🔦   ℹ️              │
+│ Location Camera Light Info      │
+├─────────────────────────────────┤
+│ Ask Genesis anything...    [⚡]  │
+└─────────────────────────────────┘
 ```
 
 ---
 
-## 🏗️ Architecture
+## 📊 Technical Details
+
+### Architecture
+
+```
+┌─────────────────────────────────┐
+│     Kivy UI Framework           │
+├─────────────────────────────────┤
+│   Genesis Android App (main.py) │
+├─────────────────────────────────┤
+│         Python 3.11             │
+├─────────────────────────────────┤
+│     Python-for-Android (p4a)    │
+├─────────────────────────────────┤
+│      Android System APIs        │
+└─────────────────────────────────┘
+```
 
 ### Technology Stack
+
+**Frontend:**
+- Kivy 2.2.1 (UI framework)
+- Custom widgets with canvas graphics
+- Material-inspired design
+
+**Backend:**
+- Python 3.11
+- Threading for async operations
+- Simple response system (preview)
+
+**Build:**
+- Buildozer (APK packaging)
+- Python-for-Android (p4a)
+- GitHub Actions (CI/CD)
+
+### Dependencies
+
 ```
-┌─────────────────────────────────────┐
-│     Kivy UI Framework (Python)      │  ← Futuristic Interface
-├─────────────────────────────────────┤
-│   Genesis AI Core (Python Modules)  │  ← Reasoning Engine
-├─────────────────────────────────────┤
-│    llama.cpp (C++ Inference)        │  ← LLM Processing
-├─────────────────────────────────────┤
-│  Hardware Acceleration Layer        │  ← NPU/GPU/CPU
-│  • Qualcomm QNN (NPU)              │
-│  • Vulkan (GPU)                    │
-│  • Standard CPU                     │
-├─────────────────────────────────────┤
-│   Android System (Device APIs)      │  ← Camera, GPS, etc.
-└─────────────────────────────────────┘
-```
-
-### Core Components
-- **UI Layer**: Kivy 2.2.1 with custom widgets
-- **AI Engine**: CodeLlama-7B (GGUF quantized)
-- **Acceleration**: QNN (NPU), Vulkan (GPU), CPU fallback
-- **Device Integration**: Termux API wrappers
-- **Memory System**: Persistent conversation storage
-- **Learning System**: Adaptive feedback mechanism
-
----
-
-## 📊 Performance
-
-### Inference Speed (Samsung S24 Ultra)
-| Task Type | NPU Mode | GPU Mode | CPU Mode |
-|-----------|----------|----------|----------|
-| Simple Query | 2-3s | 5-7s | 15-20s |
-| Math Problem | 3-4s | 7-10s | 20-25s |
-| Code Generation | 5-8s | 12-18s | 30-45s |
-| Complex Reasoning | 8-12s | 20-30s | 60-90s |
-
-### Resource Usage
-- **Memory**: 80-150 MB typical
-- **Storage**: ~100 MB (app + data)
-- **Battery**: NPU uses 10x less power than CPU
-- **CPU Usage**: 5-15% during inference
-
-### Optimization Features
-- 🔋 Battery-aware mode switching
-- 🌡️ Thermal throttling protection
-- 🧠 Smart memory management
-- ⚡ Automatic acceleration selection
-
----
-
-## 🔧 Technical Specifications
-
-### Android Requirements
-| Specification | Requirement |
-|--------------|-------------|
-| **OS Version** | Android 7.0+ (API 21+) |
-| **Architecture** | ARM 32/64-bit (armeabi-v7a, arm64-v8a) |
-| **RAM** | 2 GB minimum, 4+ GB recommended |
-| **Storage** | 200 MB free space |
-| **Processor** | Any ARM-based Android CPU |
-
-### Supported Hardware Acceleration
-| Feature | Chipset Support |
-|---------|----------------|
-| **NPU** | Qualcomm Snapdragon with Hexagon NPU |
-| **GPU** | Any GPU with Vulkan support |
-| **CPU** | Universal (all devices) |
-
-### Permissions Used
-```
-✓ INTERNET              - Web search (optional)
-✓ CAMERA                - Photo capture
-✓ RECORD_AUDIO          - Audio recording
-✓ ACCESS_FINE_LOCATION  - GPS positioning
-✓ READ/WRITE_STORAGE    - File operations
-✓ FLASHLIGHT            - Torch control
-✓ MODIFY_AUDIO_SETTINGS - Volume control
-✓ WAKE_LOCK             - Background processing
-✓ VIBRATE               - Haptic feedback
+python3
+kivy (UI framework)
+pillow (image processing)
+requests (HTTP client)
+certifi (SSL certificates)
+urllib3 (HTTP library)
+pyjnius (Python-Java bridge)
+android (Android APIs)
+plyer (cross-platform APIs)
 ```
 
 ---
 
-## 🎯 Use Cases
+## 🔧 Building from Source
 
-### Personal Assistant
-- Set reminders and alarms
-- Answer questions instantly
-- Perform calculations
-- Get directions and locations
-- Control device settings
+### Prerequisites
+```bash
+# Install Buildozer
+pip install buildozer cython==0.29.36
 
-### Development Tool
-- Debug code snippets
-- Calculate complex expressions
-- Test algorithms
-- Learn programming concepts
-- Execute Python code safely
+# System dependencies (Ubuntu/Debian)
+sudo apt-get install -y \
+    python3 build-essential git \
+    libsdl2-dev libsdl2-image-dev \
+    libsdl2-mixer-dev libsdl2-ttf-dev \
+    openjdk-17-jdk
+```
 
-### Education
-- Solve math problems step-by-step
-- Explain concepts
-- Practice problem-solving
-- Learn new topics
-- Study assistance
+### Build APK
+```bash
+# Clone repository
+git clone https://github.com/Ishabdullah/Genesis.git
+cd Genesis
 
-### Productivity
-- Quick notes and memos
-- File management
-- Information lookup
-- Task automation
-- Quick commands
+# Checkout Android branch
+git checkout claude/genesis-android-production-011CUsnEhM8wFNiRFhG1A4SC
 
-### Photography
-- Instant photo capture via voice
-- Timed photo shoots
-- Hands-free camera control
-- Location-tagged images
+# Generate icon
+python3 create_icon.py
 
----
+# Build APK
+buildozer android debug
 
-## 🔒 Privacy & Security
+# APK will be in bin/
+ls -lh bin/*.apk
+```
 
-### Data Privacy
-- ✅ **100% On-Device Processing** - Your data never leaves your phone
-- ✅ **No Cloud Servers** - No remote processing or storage
-- ✅ **No Telemetry** - We don't track your usage
-- ✅ **No Accounts** - No registration or login required
-- ✅ **Local Storage Only** - All data saved locally
-
-### Optional Internet Usage
-Internet is ONLY used when you explicitly:
-- Enable web search feature
-- Use Claude API fallback (optional)
-- Update the app
-
-**Default: Works completely offline**
-
-### Permission Transparency
-Every permission is clearly explained:
-- Camera: Only for "take photo" commands
-- Location: Only for "where am I" queries
-- Microphone: Only for audio recording
-- Storage: Only for saving files
-- Internet: Only for optional web features
+**First build takes 30-60 minutes** (downloads Android SDK/NDK)
+**Subsequent builds:** 15-30 minutes (cached)
 
 ---
 
 ## 🛣️ Roadmap
 
-### ✅ Version 2.3.0 (Current)
-- Futuristic Android UI
-- Hardware acceleration (NPU/GPU/CPU)
-- Full device control integration
-- Debug features for developers
-- Automated APK builds
+### v2.3.0-preview (Current) ✅
+- Futuristic UI implementation
+- Basic chat interface
+- Quick action buttons
+- App branding and icon
+- GitHub Actions build
 
-### 🔄 Version 2.4.0 (In Progress)
-- Voice input/output
-- Conversation history export
-- Settings customization screen
-- Model selection UI
-- Performance optimizations
+### v2.4.0 (Next Release)
+- LLM integration
+- Device control APIs
+- Hardware acceleration
+- Voice input support
+- Settings screen
 
-### 📋 Version 3.0.0 (Planned)
-- Multi-modal support (image input)
-- Advanced memory management
-- Custom themes
-- Widget support
-- Cloud sync (optional)
+### v2.5.0
+- File operations
+- Code execution
+- Web search
+- Advanced memory
+- Performance optimization
 
-### 🚀 Future Versions
-- App store release
-- Multiple language support
-- Plugin system
-- Custom voice commands
-- Automation workflows
+### v3.0.0 (Full Release)
+- All features complete
+- App store ready
+- Comprehensive testing
+- Documentation complete
+- Public release
 
 ---
 
 ## 📚 Documentation
 
 ### For Users
-- **README.md** (this file) - Overview and features
-- **BUILD_COMPLETE_SUMMARY.md** - Installation and usage
-- **DEBUG_FEATURES.md** - Debug commands (developers)
+- **README.md** (this file) - Overview and installation
+- **BUILD_FIX_SUMMARY.md** - Build troubleshooting
+- **BUILD_COMPLETE_SUMMARY.md** - Build guide
 
 ### For Developers
-- **PROJECT_HANDOFF.md** - Complete technical documentation
-- **IMPLEMENTATION_PLAN.md** - Development roadmap
+- **IMPLEMENTATION_PLAN.md** - 12-phase development plan
+- **PROJECT_HANDOFF.md** - Technical documentation
+- **DEBUG_FEATURES.md** - Developer debug tools
 - **buildozer.spec** - Build configuration
-- **main.py** - Source code with comments
 
 ### Quick Links
-- [Download APK](#-download)
-- [Installation Guide](#-installation)
-- [Usage Examples](#-usage-examples)
-- [Troubleshooting](#-troubleshooting)
-- [GitHub Repository](https://github.com/Ishabdullah/Genesis)
+- [GitHub Actions](https://github.com/Ishabdullah/Genesis/actions)
+- [Issues](https://github.com/Ishabdullah/Genesis/issues)
+- [Original Genesis](https://github.com/Ishabdullah/Genesis) (Termux version)
 
 ---
 
-## 🐛 Troubleshooting
+## ❓ FAQ
 
-### App Won't Install
-**Problem**: "App not installed" error
+### Is this the full Genesis AI?
+Not yet. This is a **preview version** showcasing the UI. Full AI capabilities are being integrated.
 
-**Solutions**:
-1. Enable "Unknown sources" in Settings
-2. Check available storage (need 200+ MB)
-3. Try a different file manager
-4. Uninstall any previous version first
+### When will it be feature-complete?
+Following the 12-phase plan in IMPLEMENTATION_PLAN.md. Estimated 12-16 weeks for full release.
 
-### Permissions Not Working
-**Problem**: Device features don't work
+### Can I use it now?
+Yes! The UI and chat interface work. Full AI features coming soon.
 
-**Solutions**:
-1. Go to Settings → Apps → Genesis → Permissions
-2. Grant all requested permissions
-3. Restart the app
-4. Try the feature again
+### Will it work offline?
+Yes, once LLM integration is complete, it will work 100% offline.
 
-### Slow Performance
-**Problem**: Responses take too long
+### What about the Termux version?
+The original Termux version is still available on the main branch. This is the Android app version.
 
-**Solutions**:
-1. Check acceleration mode (tap ⚡ button)
-2. Close other apps to free memory
-3. Ensure battery is charged (>20%)
-4. Check device isn't overheating
-
-### App Crashes
-**Problem**: App closes unexpectedly
-
-**Solutions**:
-1. Clear app cache (Settings → Apps → Genesis → Storage)
-2. Reinstall the app
-3. Check device has enough RAM
-4. Report issue with logs: `adb logcat`
-
-### Debug Panel Showing
-**Problem**: Yellow debug panel appears (you don't want it)
-
-**Solution**:
-- You're using a debug build
-- Download the release version (when available)
-- Or build release APK yourself
+### How is this different from the CLI version?
+- Native Android app vs Termux CLI
+- Graphical UI vs text-only
+- Touch interface vs keyboard-only
+- More accessible to general users
 
 ---
 
 ## 🤝 Contributing
 
-Genesis is under active development! Contributions welcome:
+This is an active development branch. Contributions welcome!
 
-### Ways to Contribute
-- 🐛 Report bugs and issues
-- 💡 Suggest new features
+### Ways to Help
+- 🐛 Test the preview app and report issues
+- 💡 Suggest UI improvements
 - 📝 Improve documentation
-- 🎨 Design UI improvements
 - 🔧 Submit pull requests
 
 ### Development Setup
 ```bash
-# Clone repository
-git clone https://github.com/Ishabdullah/Genesis.git
-cd Genesis
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run on desktop (testing)
-python main.py
-
-# Build Android APK
-buildozer android debug
+git checkout claude/genesis-android-production-011CUsnEhM8wFNiRFhG1A4SC
+# Make changes
+# Test locally
+# Submit PR
 ```
-
-### Contribution Guidelines
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
 
 ---
 
 ## 📄 License
 
-Genesis is licensed under the **MIT License**.
-
-```
-MIT License
-
-Copyright (c) 2025 Genesis AI Project
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-[Full license text in LICENSE file]
-```
+MIT License - See LICENSE file for details
 
 ---
 
-## 👨‍💻 Credits
+## 🙏 Credits
 
-### Development
-- **Genesis AI Project** - Core development
-- **Anthropic** - Claude AI assistance
-- **Meta** - CodeLlama model
-- **Kivy Team** - Android UI framework
-- **llama.cpp** - Inference engine
+**Development:**
+- Genesis AI Project
+- Anthropic (Claude assistance)
+- Kivy Team (UI framework)
+- Python-for-Android (p4a)
 
-### Technologies Used
-- Python 3.11+
+**Technologies:**
 - Kivy 2.2.1
-- CodeLlama-7B
-- llama.cpp
-- Qualcomm QNN SDK
-- Vulkan API
-- Termux API
+- Python 3.11
+- Buildozer
+- GitHub Actions
 
 ---
 
 ## 📞 Support
 
 ### Get Help
-- **GitHub Issues**: [Report a bug](https://github.com/Ishabdullah/Genesis/issues)
-- **Documentation**: [Read the docs](#-documentation)
-- **Email**: support@genesis-ai.example.com (coming soon)
+- **Issues:** [GitHub Issues](https://github.com/Ishabdullah/Genesis/issues)
+- **Build Status:** [GitHub Actions](https://github.com/Ishabdullah/Genesis/actions)
+- **Documentation:** See docs in repository
 
 ### Stay Updated
-- **GitHub**: [Star the repo](https://github.com/Ishabdullah/Genesis)
-- **Releases**: [Watch for updates](https://github.com/Ishabdullah/Genesis/releases)
-- **Changelog**: See CHANGELOG.md for version history
+- **Watch Repo:** Get notified of updates
+- **Check Actions:** See latest builds
+- **Follow Branch:** Track development progress
 
 ---
 
-## 🌟 Why Genesis?
+## 🎯 Current Status Summary
 
-### Compared to Cloud AI Assistants
-| Feature | Genesis | Cloud Assistants |
-|---------|---------|------------------|
-| **Privacy** | 100% local | Data sent to servers |
-| **Offline** | Full functionality | Requires internet |
-| **Speed** | Instant (NPU) | Network dependent |
-| **Cost** | Free forever | Subscription required |
-| **Device Control** | Complete | Limited |
-| **Customization** | Full control | Locked down |
-
-### The Future of AI
-Genesis represents a new paradigm:
-- **Own your AI** - Runs on your device
-- **Control your data** - Never leaves your phone
-- **Unlimited access** - No API limits or costs
-- **Always available** - No network required
-- **Truly personal** - Learns from you only
-
-**This is AI as it should be: Private, Fast, and Yours.**
+**What Works:** ✅ UI, Chat Interface, Basic Responses
+**What's Coming:** ⏳ AI, Device Control, Advanced Features
+**Build Status:** 🔄 Check [Actions](https://github.com/Ishabdullah/Genesis/actions)
+**Phase:** 3 of 12 (~25% complete)
+**Version:** 2.3.0-preview
 
 ---
 
 <div align="center">
 
-## 🚀 Ready to Experience the Future?
+## 🚀 Experience the Future of AI
 
-[**Download Genesis APK Now**](#-download)
+**Download the preview and see the futuristic UI!**
 
-**Join thousands of users experiencing true AI freedom**
+[Get Latest APK](#-download-apk) • [View Progress](#-development-status) • [Contribute](#-contributing)
 
 ---
 
-Made with ❤️ by the Genesis AI Team
+Made with 🧬 by the Genesis AI Team
 
-[GitHub](https://github.com/Ishabdullah/Genesis) • [Documentation](#-documentation) • [Support](#-support)
+**Version 2.3.0-preview** • Built for Android 7.0+
 
-**Version 2.3.0** • Built with 🧬 DNA • Powered by ⚡
+*Privacy-First • On-Device • Open Source*
 
 </div>

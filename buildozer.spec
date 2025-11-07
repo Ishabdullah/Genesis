@@ -16,13 +16,14 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,json,txt,md
 
 # (list) List of inclusions using pattern matching
-source.include_patterns = data/*,models/*,scripts/*
+# Only include directories that actually exist
+source.include_patterns =
 
 # (list) Source files to exclude (let empty to not exclude anything)
-source.exclude_exts = spec
+source.exclude_exts = spec,md
 
 # (list) List of directory to exclude (let empty to not exclude anything)
-source.exclude_dirs = tests, bin, .git, __pycache__, .github
+source.exclude_dirs = tests,bin,.git,__pycache__,.github,.buildozer,accel_backends,tools
 
 # (list) List of exclusions using pattern matching
 source.exclude_patterns = license,images/*.jpg
