@@ -34,11 +34,18 @@ This file tracks all attempted fixes for the Genesis Android APK build issues.
 ### Attempt 5: Export ACLOCAL_PATH environment variables
 - **Date:** 2025-11-07
 - **Config:** NDK 28c, p4a master branch, autoconf-archive + ACLOCAL_PATH export
-- **Status:** 🔄 IN PROGRESS
+- **Result:** ❌ FAILED - libffi autoconf error (LT_SYS_SYMBOL_USCORE undefined)
 - **Changes:**
   - Added `export ACLOCAL_PATH="/usr/share/aclocal:${ACLOCAL_PATH}"`
   - Added `export ACLOCAL="aclocal -I /usr/share/aclocal"`
-- **Hypothesis:** This should make autoconf-archive macros available to libffi's autogen.sh
+- **Reason:** Environment variables were set correctly but macros still not found by autogen.sh
+- **Note:** ACLOCAL_PATH was confirmed in environment but didn't help
+
+### Attempt 6: Use p4a develop branch with NDK 28c
+- **Date:** 2025-11-07
+- **Config:** NDK 28c, p4a develop branch, autoconf-archive + ACLOCAL_PATH export
+- **Status:** 🔄 IN PROGRESS
+- **Hypothesis:** develop branch may have newer libffi version or patches for this autoconf issue
 
 ## Build Configuration Summary
 

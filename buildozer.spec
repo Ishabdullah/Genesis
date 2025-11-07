@@ -258,8 +258,8 @@ android.allow_backup = True
 #p4a.fork = kivy
 
 # (str) python-for-android branch to use, defaults to master
-# Using master branch with NDK 28c
-p4a.branch = master
+# Using develop branch - may have newer libffi with autoconf fixes
+p4a.branch = develop
 
 # (str) python-for-android git clone directory (if empty, it will be automatically cloned from github)
 #p4a.source_dir =
