@@ -19,6 +19,9 @@ import threading
 import sys
 import os
 from pathlib import Path
+import platform
+import json
+from datetime import datetime
 
 # Add Genesis modules to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -27,6 +30,15 @@ sys.path.insert(0, str(Path(__file__).parent))
 from genesis import Genesis as GenesisCore
 from device_manager import get_device_manager
 from accel_manager import AccelManager, get_accel_manager
+
+# Detect if this is a debug build
+DEBUG_MODE = os.environ.get('GENESIS_DEBUG', '1') == '1'  # Default to debug for APK debug builds
+
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
 
 
 class FuturisticTextInput(TextInput):
@@ -128,12 +140,106 @@ class ChatMessage(BoxLayout):
         self.height = message_label.height + dp(10)
 
 
+class DebugPanel(BoxLayout):
+    """Debug information panel for developers"""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'vertical'
+        self.size_hint_y = None
+        self.height = dp(200)
+        self.padding = [dp(5), dp(5)]
+        self.spacing = dp(3)
+
+        with self.canvas.before:
+            Color(0.1, 0.1, 0.2, 0.95)  # Dark background
+            self.bg_rect = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(5)])
+
+        self.bind(pos=self.update_rect, size=self.update_rect)
+
+        # Debug info label
+        self.debug_label = Label(
+            text='[b][color=ffff00]DEBUG MODE[/color][/b]\nInitializing...',
+            markup=True,
+            color=(0.8, 0.8, 0.8, 1),
+            font_size='9sp',
+            size_hint_y=1,
+            halign='left',
+            valign='top',
+            text_size=(Window.width - dp(20), None)
+        )
+        self.debug_label.bind(
+            width=lambda *x: self.debug_label.setter('text_size')(
+                self.debug_label, (self.debug_label.width, None)
+            )
+        )
+        self.add_widget(self.debug_label)
+
+        # Start update timer
+        Clock.schedule_interval(self.update_debug_info, 2.0)  # Update every 2 seconds
+
+    def update_rect(self, *args):
+        self.bg_rect.pos = self.pos
+        self.bg_rect.size = self.size
+
+    def update_debug_info(self, dt):
+        """Update debug information"""
+        try:
+            info_lines = [
+                '[b][color=ffff00]🔧 DEBUG MODE[/color][/b]',
+                f'[color=00ffff]Time:[/color] {datetime.now().strftime("%H:%M:%S")}'
+            ]
+
+            # Memory info
+            if PSUTIL_AVAILABLE:
+                process = psutil.Process()
+                mem_info = process.memory_info()
+                mem_mb = mem_info.rss / 1024 / 1024
+                cpu_percent = process.cpu_percent(interval=0.1)
+                info_lines.append(f'[color=00ff00]Memory:[/color] {mem_mb:.1f} MB | [color=00ff00]CPU:[/color] {cpu_percent:.1f}%')
+
+            # Device info
+            info_lines.append(f'[color=ff00ff]Platform:[/color] {platform.system()} {platform.release()}')
+
+            # App info
+            app = App.get_running_app()
+            if hasattr(app, 'genesis_core') and app.genesis_core:
+                info_lines.append('[color=00ff00]Core:[/color] ✓ Initialized')
+            else:
+                info_lines.append('[color=ffaa00]Core:[/color] ⚠ Not Ready')
+
+            if hasattr(app, 'accel_manager') and app.accel_manager:
+                info_lines.append(f'[color=00ffff]Accel:[/color] {app.current_accel_mode.upper()}')
+            else:
+                info_lines.append('[color=ffaa00]Accel:[/color] ⚠ Not Initialized')
+
+            # Module status
+            modules_loaded = []
+            if 'genesis' in sys.modules:
+                modules_loaded.append('genesis')
+            if 'device_manager' in sys.modules:
+                modules_loaded.append('device')
+            if 'accel_manager' in sys.modules:
+                modules_loaded.append('accel')
+
+            info_lines.append(f'[color=8888ff]Modules:[/color] {", ".join(modules_loaded)}')
+
+            # Thread count
+            thread_count = threading.active_count()
+            info_lines.append(f'[color=ff8800]Threads:[/color] {thread_count} active')
+
+            self.debug_label.text = '\n'.join(info_lines)
+        except Exception as e:
+            self.debug_label.text = f'[color=ff0000]Debug Error:[/color] {str(e)}'
+
+
 class GenesisApp(App):
     """Main Genesis Android Application"""
 
     def build(self):
         """Build the app UI"""
         self.title = 'Genesis AI Assistant'
+        self.debug_logs = []  # Store debug logs
 
         # Set window background to dark futuristic theme
         Window.clearcolor = (0.02, 0.02, 0.08, 1)
@@ -180,6 +286,12 @@ class GenesisApp(App):
         header.add_widget(status_box)
 
         main_layout.add_widget(header)
+
+        # Debug panel (only in debug mode)
+        if DEBUG_MODE:
+            self.debug_panel = DebugPanel()
+            main_layout.add_widget(self.debug_panel)
+            self.log_debug("Debug mode enabled")
 
         # Chat history (ScrollView)
         self.chat_scroll = ScrollView(size_hint=(1, 1))
@@ -253,7 +365,35 @@ class GenesisApp(App):
         # Initialize Genesis in background
         Clock.schedule_once(lambda dt: self.initialize_genesis(), 0.5)
 
+        # Add debug info if in debug mode
+        if DEBUG_MODE:
+            self.show_debug_welcome()
+
         return main_layout
+
+    def show_debug_welcome(self):
+        """Show debug mode welcome message"""
+        debug_msg = (
+            "[color=ffff00]🔧 DEBUG MODE ACTIVE[/color]\n"
+            "Developer features enabled:\n"
+            "• Real-time performance monitoring\n"
+            "• Memory usage tracking\n"
+            "• Module status display\n"
+            "• Error logging\n"
+            "\nThis panel only appears in debug APK builds."
+        )
+        self.add_message(debug_msg, is_user=False)
+
+    def log_debug(self, message):
+        """Log debug message"""
+        if DEBUG_MODE:
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            log_entry = f"[{timestamp}] {message}"
+            self.debug_logs.append(log_entry)
+            # Keep only last 100 logs
+            if len(self.debug_logs) > 100:
+                self.debug_logs = self.debug_logs[-100:]
+            print(f"[DEBUG] {log_entry}")
 
     def update_header_rect(self, instance, value):
         self.header_rect.pos = instance.pos
@@ -267,24 +407,32 @@ class GenesisApp(App):
         """Initialize Genesis core in background"""
         def init_thread():
             try:
+                self.log_debug("Starting Genesis initialization")
                 self.update_status('[color=ffff00]● INITIALIZING[/color]')
 
                 # Initialize acceleration manager
+                self.log_debug("Initializing acceleration manager")
                 self.accel_manager = get_accel_manager()
+
+                self.log_debug("Running acceleration detection and benchmark")
                 accel_profile = self.accel_manager.detect_and_benchmark()
 
                 if accel_profile and accel_profile.ranked:
                     self.current_accel_mode = accel_profile.ranked[0]
                     self.update_accel_indicator(self.current_accel_mode)
+                    self.log_debug(f"Acceleration mode: {self.current_accel_mode.upper()}")
 
                 # Initialize Genesis core
+                self.log_debug("Initializing Genesis core")
                 self.genesis_core = GenesisCore()
                 self.update_status('[color=00ff00]● READY[/color]')
+                self.log_debug("Genesis core initialized successfully")
 
                 # Report acceleration status
                 accel_msg = self.get_accel_message()
                 self.add_message(f'Genesis initialized successfully! {accel_msg}', is_user=False)
             except Exception as e:
+                self.log_debug(f"ERROR: {str(e)}")
                 self.update_status('[color=ff0000]● ERROR[/color]')
                 self.add_message(f'Error initializing Genesis: {str(e)}', is_user=False)
 
@@ -341,10 +489,18 @@ class GenesisApp(App):
         # Add user message
         self.add_message(user_input, is_user=True)
 
+        # Check for debug commands
+        if DEBUG_MODE and user_input.startswith('#debug'):
+            self.handle_debug_command(user_input)
+            return
+
         # Process in background thread
         def process_thread():
             try:
+                self.log_debug(f"Processing: {user_input[:50]}...")
                 self.update_status('[color=ffff00]● THINKING[/color]')
+
+                start_time = datetime.now()
 
                 if self.genesis_core:
                     # Use Genesis core to process
@@ -352,16 +508,102 @@ class GenesisApp(App):
                 else:
                     response = "Genesis core is still initializing. Please wait a moment..."
 
+                elapsed = (datetime.now() - start_time).total_seconds()
+                self.log_debug(f"Response generated in {elapsed:.2f}s")
+
                 self.update_status('[color=00ff00]● READY[/color]')
                 self.add_message(response, is_user=False)
             except Exception as e:
+                self.log_debug(f"ERROR in send_message: {str(e)}")
                 self.update_status('[color=ff0000]● ERROR[/color]')
                 self.add_message(f'Error: {str(e)}', is_user=False)
 
         threading.Thread(target=process_thread, daemon=True).start()
 
+    def handle_debug_command(self, command):
+        """Handle debug commands"""
+        if command == '#debug logs':
+            # Show recent debug logs
+            if self.debug_logs:
+                logs = '\n'.join(self.debug_logs[-20:])  # Last 20 logs
+                self.add_message(f'[color=ffff00]Recent Debug Logs:[/color]\n{logs}', is_user=False)
+            else:
+                self.add_message('No debug logs yet.', is_user=False)
+
+        elif command == '#debug status':
+            # Show detailed status
+            status_info = self.get_debug_status()
+            self.add_message(status_info, is_user=False)
+
+        elif command == '#debug memory':
+            # Show memory info
+            if PSUTIL_AVAILABLE:
+                process = psutil.Process()
+                mem = process.memory_info()
+                mem_percent = process.memory_percent()
+                info = (
+                    f"[color=00ff00]Memory Usage:[/color]\n"
+                    f"RSS: {mem.rss / 1024 / 1024:.1f} MB\n"
+                    f"VMS: {mem.vms / 1024 / 1024:.1f} MB\n"
+                    f"Percent: {mem_percent:.1f}%"
+                )
+                self.add_message(info, is_user=False)
+            else:
+                self.add_message('psutil not available', is_user=False)
+
+        elif command == '#debug help':
+            help_text = (
+                "[color=ffff00]Debug Commands:[/color]\n"
+                "#debug logs - Show recent debug logs\n"
+                "#debug status - Show detailed status\n"
+                "#debug memory - Show memory usage\n"
+                "#debug help - Show this help"
+            )
+            self.add_message(help_text, is_user=False)
+
+        else:
+            self.add_message('Unknown debug command. Type #debug help', is_user=False)
+
+    def get_debug_status(self):
+        """Get detailed debug status"""
+        status_lines = ["[color=ffff00]System Status:[/color]"]
+
+        # Python version
+        status_lines.append(f"Python: {sys.version.split()[0]}")
+
+        # Device info
+        status_lines.append(f"Platform: {platform.system()} {platform.release()}")
+
+        # Kivy version
+        from kivy import __version__ as kivy_version
+        status_lines.append(f"Kivy: {kivy_version}")
+
+        # Genesis modules
+        if self.genesis_core:
+            status_lines.append("Genesis Core: ✓ Loaded")
+        else:
+            status_lines.append("Genesis Core: ✗ Not loaded")
+
+        if self.accel_manager:
+            status_lines.append(f"Acceleration: ✓ {self.current_accel_mode.upper()}")
+        else:
+            status_lines.append("Acceleration: ✗ Not initialized")
+
+        # Thread info
+        status_lines.append(f"Active Threads: {threading.active_count()}")
+
+        # Memory (if available)
+        if PSUTIL_AVAILABLE:
+            process = psutil.Process()
+            mem_mb = process.memory_info().rss / 1024 / 1024
+            status_lines.append(f"Memory: {mem_mb:.1f} MB")
+
+        return '\n'.join(status_lines)
+
     def quick_action(self, action):
         """Handle quick action buttons"""
+        self.log_debug(f"Quick action: {action}")
+
         if action == 'Accel':
             # Show acceleration status
             if self.accel_manager:
