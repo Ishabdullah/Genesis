@@ -101,7 +101,7 @@ android.minapi = 21
 android.sdk = 33
 
 # (str) Android NDK version to use
-android.ndk = 23b
+android.ndk = 26b
 
 # (bool) Use --private data storage (True) or --dir public storage (False)
 android.private_storage = True
@@ -256,7 +256,7 @@ android.allow_backup = True
 #p4a.fork = kivy
 
 # (str) python-for-android branch to use, defaults to master
-# Using stable release branch for better compatibility
+# Using master branch with NDK 26b for best compatibility
 p4a.branch = master
 
 # (str) python-for-android git clone directory (if empty, it will be automatically cloned from github)
