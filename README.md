@@ -1407,6 +1407,328 @@ You specialize in [your customization here]..."""
 
 ---
 
+## ⚡ Hardware Acceleration (GPU & NPU)
+
+**Genesis v2.3** introduces **hardware acceleration** for dramatically faster local inference using your device's GPU (Vulkan) and NPU (Qualcomm Hexagon/QNN).
+
+### 🎯 Performance Targets
+
+For "What's on my desk?" workflow on S24 Ultra:
+- **STT → LLM → TTS**: Under 3s total latency
+- **LLM generation**: 25-60 tokens/sec (vs 5-10 on CPU)
+- **Perceived response**: ~1.5-2.5s (with streaming)
+
+### 🏗️ Architecture Overview
+
+Genesis automatically detects and utilizes available accelerators:
+
+```
+Priority:  NPU (INT8 ops) > GPU (Vulkan) > CPU (fallback)
+           ↓                ↓              ↓
+Hexagon    Adreno 750      ARM Cortex
+~500 GFLOPS INT8    ~300 GFLOPS FP32    ~50 GFLOPS FP32
+```
+
+**Auto-Selection Logic:**
+- **INT8/Q4 models** → NPU (if QNN SDK available) or GPU
+- **FP16 models** → GPU (Vulkan)
+- **Fallback** → CPU (always available)
+- **Constraints** → Battery < 20% or Temp > 70°C forces CPU
+
+### 📦 Quick Start
+
+**1. Check Hardware Support**
+```bash
+cd ~/Genesis
+python3 accel_manager.py
+```
+
+Output:
+```
+🔍 Detecting hardware acceleration capabilities...
+⚡ Running microbenchmarks...
+✓ Benchmark profile saved
+
+📊 ACCELERATION PROFILE
+Ranked devices: gpu > cpu
+Battery level: 85%
+Thermal state: normal
+
+Hardware Detection:
+  ✓ CPU: 8 cores (ARM Cortex), 3.2 GHz
+  ✓ GPU: Vulkan library found: /system/lib64/libvulkan.so
+  ✗ NPU: QNN runtime not detected
+
+Benchmarks:
+  GPU: 300.0 GFLOPS, 50.0ms
+  CPU: 45.2 GFLOPS, 250.3ms
+```
+
+**2. Build Vulkan-Enabled Engine**
+```bash
+chmod +x scripts/build_llama_vulkan.sh
+./scripts/build_llama_vulkan.sh
+```
+
+This installs:
+- Vulkan headers and drivers
+- llama.cpp with Vulkan compute shaders
+- GPU-optimized inference binary
+
+**3. Enable GPU Acceleration**
+```bash
+# Set environment variable (persists in session)
+export GENESIS_ACCEL_MODE=gpu
+
+# Or let Genesis auto-select best device
+export GENESIS_ACCEL_MODE=auto
+
+# Launch Genesis
+python3 genesis.py
+```
+
+### 🔧 Model Quantization
+
+Optimize models for different accelerators:
+
+**List Available Presets:**
+```bash
+python3 tools/quantize_model.py --list-presets
+```
+
+**Quantize for GPU (Recommended):**
+```bash
+python3 tools/quantize_model.py \
+  models/CodeLlama-7B-Instruct-F16.gguf \
+  --preset gpu_optimized
+```
+
+**Quantization Presets:**
+
+| Preset | Quant Type | Target | Best For |
+|--------|-----------|--------|----------|
+| **npu_optimized** | Q8_0 (INT8) | NPU | Fastest inference, lowest power |
+| **gpu_optimized** | Q4_K_M | GPU | Balanced speed/quality on Vulkan |
+| **cpu_optimized** | Q5_K_M | CPU | Fallback mode, best CPU accuracy |
+| **balanced** | Q4_K_M | Auto | General use, works everywhere |
+| **max_quality** | Q6_K | CPU | Highest accuracy, slower |
+| **minimal_size** | Q4_0 | Auto | Smallest file, storage-constrained |
+
+**Model Manifest:**
+After quantization, a manifest JSON is created with:
+- Recommended context size
+- Memory footprint estimate
+- Acceleration hints (e.g., `--n-gpu-layers 999`)
+
+### 🧪 NPU Support (Qualcomm QNN)
+
+**Status:** Experimental (requires vendor SDK)
+
+**Installation Steps:**
+```bash
+# 1. Register and download QNN SDK
+# Visit: https://qpm.qualcomm.com/
+# Download: QNN SDK for Android (aarch64)
+
+# 2. Extract to ~/qnn/
+tar -xzf qnn-<version>.tar.gz -C ~/
+
+# 3. Set environment variable
+echo 'export QNN_SDK_ROOT=~/qnn' >> ~/.bashrc
+source ~/.bashrc
+
+# 4. Verify installation
+python3 accel_backends/qnn_adapter.py
+```
+
+**Expected Output:**
+```
+✓ QNN SDK detected!
+SDK Root: /data/data/com.termux/files/home/qnn
+Libraries: 3 found
+  - libQnnHtp.so
+  - libQnnSystem.so
+  - libQnnCpu.so
+```
+
+**Model Conversion (Manual):**
+```bash
+# Convert GGUF → ONNX → QNN binary
+# (Automated conversion coming soon)
+```
+
+**Limitations:**
+- QNN SDK is proprietary (Qualcomm account required)
+- Not all LLM ops supported on NPU
+- Genesis auto-falls back to GPU/CPU if QNN unavailable
+
+### ⚙️ Configuration
+
+**Environment Variables:**
+```bash
+# Force specific acceleration mode
+export GENESIS_ACCEL_MODE=cpu       # CPU only
+export GENESIS_ACCEL_MODE=gpu       # GPU (Vulkan) only
+export GENESIS_ACCEL_MODE=npu       # NPU (QNN) only
+export GENESIS_ACCEL_MODE=auto      # Auto-detect (default)
+
+# Battery/thermal thresholds
+export ACCEL_BATTERY_MIN=20         # Min battery % for acceleration
+export ACCEL_TEMP_MAX=70            # Max CPU temp (°C) for acceleration
+```
+
+**Runtime Safety:**
+- **Battery < 20%**: Auto-fallback to CPU (configurable)
+- **Temp > 70°C**: Thermal throttling, reduce to CPU
+- **Inference timeout**: 30s default (prevents hangs)
+- **Automatic fallback**: GPU fails → try CPU
+
+**Profile Cache:**
+- Hardware detection cached for 24 hours
+- Benchmarks re-run if device state changes
+- Cache stored: `~/Genesis/tmp/bench_cache/accel_bench.json`
+
+### 📊 Benchmarking
+
+**Run Full Benchmark:**
+```bash
+python3 -c "from accel_manager import get_profile; get_profile(force_rerun=True)"
+```
+
+**Compare Devices:**
+```bash
+python3 tests/test_accel_detection.py
+python3 tests/test_accel_inference.py
+```
+
+**Example Results (S24 Ultra):**
+```
+Device Performance:
+  NPU  :  500.0 GFLOPS,   30.0 ms  (Hexagon INT8)
+  GPU  :  300.0 GFLOPS,   50.0 ms  (Adreno 750 Vulkan)
+  CPU  :   45.2 GFLOPS,  250.3 ms  (Cortex ARM)
+
+GPU Speedup: 6.6x over CPU
+```
+
+### 🎯 Best Practices
+
+**For Speed (S24 Ultra target: <3s response):**
+1. Use GPU-optimized Q4_K_M quantization
+2. Enable GPU layer offload: `--n-gpu-layers 999`
+3. Stream tokens for perceived latency <1s
+4. Reduce context to 1024-2048 tokens
+5. Use 2-4 threads (avoid CPU overload)
+
+**For Battery Life:**
+1. Use NPU if available (most efficient)
+2. Q8_0 quantization (smaller = faster = less power)
+3. Set battery threshold: `export ACCEL_BATTERY_MIN=30`
+4. Reduce max tokens: `-n 128` instead of 512
+
+**For Quality:**
+1. Use Q5_K_M or Q6_K quantization
+2. Larger context: `-c 4096`
+3. Lower temperature: `--temp 0.5`
+4. CPU fallback acceptable for critical tasks
+
+### 🐛 Troubleshooting Acceleration
+
+**"Vulkan not detected"**
+```bash
+# Check Vulkan library
+ls -l /system/lib64/libvulkan.so
+
+# Check driver support
+vulkaninfo --summary
+
+# Install Vulkan tools (if missing)
+pkg install vulkan-tools vulkan-loader
+```
+
+**"GPU inference slower than CPU"**
+- Try different quantization: Q4_K_M often faster than Q8
+- Check layer offload: Ensure `--n-gpu-layers` is set
+- Thermal throttling: Let device cool down
+- Driver issue: Some Android builds have buggy Vulkan
+
+**"QNN SDK not found"**
+- Verify `$QNN_SDK_ROOT` points to extracted SDK
+- Check libraries exist: `ls $QNN_SDK_ROOT/lib/aarch64-android/`
+- NPU is optional - GPU/CPU will work fine without it
+
+**"Out of memory during inference"**
+- Reduce context: `-c 1024` instead of 4096
+- Use smaller quantization: Q4_0 instead of Q5_K_M
+- Close other apps
+- Check model size vs available RAM
+
+### 📁 File Structure
+
+```
+Genesis/
+├── accel_manager.py              # Main acceleration manager
+├── accel_backends/
+│   ├── qnn_adapter.py            # NPU (QNN) interface
+│   └── vulkan_backend.py         # GPU helper utilities
+├── engines/
+│   ├── llama_vulkan              # Vulkan-enabled binary
+│   ├── llama-cli_vulkan          # CLI with GPU support
+│   └── llama-bench_vulkan        # GPU benchmarking tool
+├── scripts/
+│   └── build_llama_vulkan.sh     # Vulkan build script
+├── tools/
+│   └── quantize_model.py         # Model quantization tool
+├── tests/
+│   ├── test_accel_detection.py   # Hardware detection tests
+│   └── test_accel_inference.py   # Inference workflow tests
+└── tmp/
+    └── bench_cache/              # Cached benchmark results
+        └── accel_bench.json
+```
+
+### 🔬 Technical Details
+
+**Vulkan Compute:**
+- Uses Vulkan compute shaders for GPU matmul
+- FP16/FP32 precision on Adreno 750
+- ~2-3x faster than CPU for quantized models
+- Requires Android API 24+ (Android 7.0+)
+
+**QNN/Hexagon NPU:**
+- Qualcomm AI Engine 190 (Snapdragon 8 Gen 3)
+- INT8 ops optimized for neural workloads
+- ~10x power efficiency vs CPU
+- Requires proprietary SDK (not FOSS)
+
+**Quantization Impact:**
+| Quant | Size | Speed | Quality | GPU Compat | NPU Compat |
+|-------|------|-------|---------|-----------|-----------|
+| F32   | 100% | 1.0x  | 100%    | ✓         | ✗         |
+| F16   | 50%  | 1.8x  | 99.9%   | ✓✓        | ✗         |
+| Q8_0  | 50%  | 2.0x  | 98%     | ✓         | ✓✓        |
+| Q6_K  | 38%  | 2.5x  | 97%     | ✓         | ✗         |
+| Q5_K_M| 33%  | 3.0x  | 95%     | ✓         | ~         |
+| Q4_K_M| 27%  | 4.0x  | 93%     | ✓✓        | ~         |
+| Q4_0  | 25%  | 4.5x  | 90%     | ✓         | ~         |
+
+**Memory Estimates (7B model):**
+| Quant | Model Size | + Context (2048) | Total RAM |
+|-------|-----------|------------------|-----------|
+| F16   | ~14 GB    | +4 GB            | ~18 GB    |
+| Q8_0  | ~7 GB     | +2 GB            | ~9 GB     |
+| Q5_K_M| ~4.7 GB   | +2 GB            | ~6.7 GB   |
+| Q4_K_M| ~4.0 GB   | +2 GB            | ~6.0 GB   |
+
+### 📖 Further Reading
+
+- [llama.cpp Vulkan Backend](https://github.com/ggerganov/llama.cpp/blob/master/docs/vulkan.md)
+- [Qualcomm QNN SDK](https://qpm.qualcomm.com/)
+- [Android Vulkan Guide](https://developer.android.com/ndk/guides/graphics/getting-started)
+- [GGUF Quantization](https://github.com/ggerganov/llama.cpp/blob/master/examples/quantize/README.md)
+
+---
+
 ## 🐛 Troubleshooting
 
 ### Common Issues

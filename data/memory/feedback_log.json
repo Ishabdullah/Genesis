@@ -11,5 +11,44 @@
       "session_id": "883cfedb03a5"
     },
     "feedback_type": "correction"
+  },
+  {
+    "timestamp": "2025-11-06T14:44:57.900114",
+    "query": "what is todays date",
+    "response": "\u001b[1;44;93m Content \n\u001b[0m\n**Today's date is Thursday, November 6, 2025**[1][2][3][5][6][8][12].\n\nThis day is the **310th day of the year 2025**, with **55 days remaining in the year**[2][6][9].\n\nIt is ...",
+    "is_correct": true,
+    "note": null,
+    "source": "perplexity",
+    "confidence": 0.0,
+    "metadata": {
+      "session_id": "a732ff85d690"
+    },
+    "feedback_type": "correction"
+  },
+  {
+    "timestamp": "2025-11-06T15:51:21.999406",
+    "query": "What is todays date",
+    "response": "\u001b[1;44;93m Content \n\u001b[0m\nToday's date is **Thursday, November 6, 2025**[1][2][3][5][6][9][10][15].\n\nThis day is the **310th day of the year**, with **55 days remaining** in 2025[1][2][6][9].\n- In nume...",
+    "is_correct": true,
+    "note": "but don't use perplexity for a simple question use termux api to check the phones internal date",
+    "source": "perplexity",
+    "confidence": 0.0,
+    "metadata": {
+      "session_id": "04da5acfe6c2"
+    },
+    "feedback_type": "refinement"
+  },
+  {
+    "timestamp": "2025-11-06T16:11:30.849468",
+    "query": "show me the exact results ypu got from ypur last websearch",
+    "response": "\u001b[1;44;93m Content \n\u001b[0m\nHere are the exact results from my last web search, listed in the order received:\n\n\ninfo  \nCheck or delete your Chrome browsing history - Google Help: Tips:\n___On your compute...",
+    "is_correct": false,
+    "note": "should just give me the exact copy of the web results you got for the pizza place search which was the last web search you did",
+    "source": "perplexity",
+    "confidence": 0.0,
+    "metadata": {
+      "session_id": "8380d5bc11a5"
+    },
+    "feedback_type": "correction"
   }
 ]

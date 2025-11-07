@@ -6,10 +6,10 @@
     "total_count": 0
   },
   "perplexity": {
-    "base_confidence": 0.75,
+    "base_confidence": 0.75139375,
     "bonus_synthesis": 0.1,
-    "success_count": 0,
-    "total_count": 0
+    "success_count": 2,
+    "total_count": 3
   },
   "claude": {
     "base_confidence": 0.85,

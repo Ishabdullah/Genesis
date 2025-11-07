@@ -1,0 +1,16 @@
+Test scenario to reproduce the #correct and #incorrect issue:
+
+1. Start Genesis: ./genesis.py
+2. Ask a simple question: "What is 2 + 2?"
+3. Wait for Genesis response
+4. Type: #correct
+5. Observe behavior
+
+Expected: Genesis should display "✓ Last response marked as correct" and return to prompt
+Actual (reported by user): Genesis treats "#correct" as a question
+
+Potential causes:
+- The commands might not be recognized due to character encoding
+- There might be whitespace issues
+- The commands might be processed but also fall through to LLM
+- Something else might be intercepting these commands first

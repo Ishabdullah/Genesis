@@ -45,6 +45,60 @@
       "source": "perplexity",
       "success": true,
       "error": null
+    },
+    {
+      "timestamp": "2025-11-06T14:17:39.735943",
+      "type": "fallback_attempt",
+      "query": "What is the current Bitcoin price right now and what caused the most",
+      "local_confidence": 0.5,
+      "source": "perplexity",
+      "success": true,
+      "error": null
+    },
+    {
+      "timestamp": "2025-11-06T14:18:51.409761",
+      "type": "fallback_attempt",
+      "query": "recent significant price movement?#correct",
+      "local_confidence": 0.5,
+      "source": "perplexity",
+      "success": true,
+      "error": null
+    },
+    {
+      "timestamp": "2025-11-06T14:44:30.111813",
+      "type": "fallback_attempt",
+      "query": "what is todays date",
+      "local_confidence": 0.5,
+      "source": "perplexity",
+      "success": true,
+      "error": null
+    },
+    {
+      "timestamp": "2025-11-06T15:50:31.199756",
+      "type": "fallback_attempt",
+      "query": "What is todays date",
+      "local_confidence": 0.5,
+      "source": "perplexity",
+      "success": true,
+      "error": null
+    },
+    {
+      "timestamp": "2025-11-06T16:01:10.072506",
+      "type": "fallback_attempt",
+      "query": "who is the current president of the united states",
+      "local_confidence": 0.5,
+      "source": "perplexity",
+      "success": true,
+      "error": null
+    },
+    {
+      "timestamp": "2025-11-06T16:10:09.067299",
+      "type": "fallback_attempt",
+      "query": "show me the exact results ypu got from ypur last websearch",
+      "local_confidence": 0.5,
+      "source": "perplexity",
+      "success": true,
+      "error": null
     }
   ]
 }
