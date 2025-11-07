@@ -102,8 +102,8 @@ android.minapi = 21
 android.sdk = 33
 
 # (str) Android NDK version to use
-# Using r21e - most stable version for Kivy builds
-android.ndk = r21e
+# Using 21e - buildozer will add 'r' prefix automatically
+android.ndk = 21e
 
 # (bool) Use --private data storage (True) or --dir public storage (False)
 android.private_storage = True
