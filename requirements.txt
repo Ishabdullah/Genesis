@@ -1,0 +1,39 @@
+# Genesis AI Assistant - Python Requirements
+# For Android APK building with Buildozer
+
+# Core Kivy framework for Android UI
+kivy>=2.2.1
+Kivy-Garden>=0.1.5
+
+# Image processing
+Pillow>=10.0.0
+
+# HTTP requests for web search and API calls
+requests>=2.31.0
+urllib3>=2.0.0
+certifi>=2023.0.0
+charset-normalizer>=3.0.0
+idna>=3.4
+
+# Terminal colors and formatting
+colorama>=0.4.6
+
+# Interactive prompts (for CLI mode)
+prompt_toolkit>=3.0.39
+
+# Web server for HTTP bridge
+flask>=3.0.0
+Werkzeug>=3.0.0
+
+# System monitoring
+psutil>=5.9.5
+
+# Android-specific
+pyjnius>=1.5.0
+plyer>=2.1.0
+
+# JSON handling (stdlib, but listed for completeness)
+# json - stdlib
+
+# Additional utilities
+python-dateutil>=2.8.2

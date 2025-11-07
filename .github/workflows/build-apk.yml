@@ -1,0 +1,191 @@
+name: Build Genesis Android APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - Genesis-App
+      - 'claude/**'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3-pip \
+            build-essential \
+            git \
+            ffmpeg \
+            libsdl2-dev \
+            libsdl2-image-dev \
+            libsdl2-mixer-dev \
+            libsdl2-ttf-dev \
+            libportmidi-dev \
+            libswscale-dev \
+            libavformat-dev \
+            libavcodec-dev \
+            zlib1g-dev \
+            libgstreamer1.0-dev \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            libmtdev-dev \
+            xclip \
+            xsel \
+            openjdk-17-jdk \
+            autoconf \
+            libtool \
+            pkg-config \
+            cmake \
+            ninja-build \
+            zip \
+            unzip
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Buildozer
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --upgrade buildozer
+          python3 -m pip install --upgrade cython==0.29.36
+
+      - name: Install Python dependencies
+        run: |
+          if [ -f requirements.txt ]; then
+            python3 -m pip install -r requirements.txt
+          fi
+
+      - name: Generate app icon
+        run: |
+          python3 create_icon.py
+
+      - name: Cache Buildozer global directory
+        uses: actions/cache@v4
+        with:
+          path: .buildozer_global
+          key: buildozer-global-${{ hashFiles('buildozer.spec') }}
+
+      - name: Cache Buildozer directory
+        uses: actions/cache@v4
+        with:
+          path: .buildozer
+          key: buildozer-${{ hashFiles('buildozer.spec') }}
+
+      - name: Build APK with Buildozer
+        run: |
+          # Accept Android SDK licenses
+          yes | buildozer android debug || true
+
+          # Build the APK
+          buildozer -v android debug
+
+      - name: List built files
+        run: |
+          echo "=== Buildozer bin directory ==="
+          ls -lah bin/ || echo "No bin directory"
+          echo ""
+          echo "=== Looking for APK files ==="
+          find . -name "*.apk" -type f
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: genesis-ai-apk
+          path: bin/*.apk
+          if-no-files-found: error
+
+      - name: Get APK info
+        if: success()
+        run: |
+          APK_FILE=$(find bin -name "*.apk" -type f | head -n 1)
+          if [ -n "$APK_FILE" ]; then
+            echo "✅ APK built successfully!"
+            echo "📦 File: $APK_FILE"
+            echo "📏 Size: $(du -h "$APK_FILE" | cut -f1)"
+            echo ""
+            echo "You can download the APK from the Actions artifacts tab."
+          fi
+
+      - name: Create release info
+        if: success() && github.event_name == 'push'
+        run: |
+          echo "# Genesis AI - Android APK" > release_info.txt
+          echo "" >> release_info.txt
+          echo "Build Date: $(date)" >> release_info.txt
+          echo "Commit: ${{ github.sha }}" >> release_info.txt
+          echo "Branch: ${{ github.ref_name }}" >> release_info.txt
+          echo "" >> release_info.txt
+          echo "## Features" >> release_info.txt
+          echo "- 🧬 Complete AI assistant with device control" >> release_info.txt
+          echo "- 🚀 NPU acceleration support (Qualcomm Hexagon)" >> release_info.txt
+          echo "- ⚡ GPU acceleration support (Vulkan)" >> release_info.txt
+          echo "- 🖥️ CPU fallback for compatibility" >> release_info.txt
+          echo "- 📍 GPS location access" >> release_info.txt
+          echo "- 📸 Camera control" >> release_info.txt
+          echo "- 🔦 Flashlight control" >> release_info.txt
+          echo "- 🎤 Audio recording" >> release_info.txt
+          echo "- 🌐 Web search integration" >> release_info.txt
+          echo "" >> release_info.txt
+          echo "## Installation" >> release_info.txt
+          echo "1. Download the APK from artifacts" >> release_info.txt
+          echo "2. Enable 'Install from unknown sources' in Android settings" >> release_info.txt
+          echo "3. Install the APK" >> release_info.txt
+          echo "4. Grant necessary permissions when prompted" >> release_info.txt
+
+      - name: Upload release info
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-info
+          path: release_info.txt
+          if-no-files-found: ignore
+
+  build-info:
+    name: Build Information
+    runs-on: ubuntu-latest
+    needs: build-apk
+
+    steps:
+      - name: Display build info
+        run: |
+          echo "=========================================="
+          echo "   GENESIS AI - BUILD COMPLETE"
+          echo "=========================================="
+          echo ""
+          echo "✅ Android APK built successfully!"
+          echo ""
+          echo "📥 To download the APK:"
+          echo "   1. Go to the Actions tab"
+          echo "   2. Click on this workflow run"
+          echo "   3. Scroll down to 'Artifacts'"
+          echo "   4. Download 'genesis-ai-apk'"
+          echo ""
+          echo "📱 Install on your Android device:"
+          echo "   1. Transfer the APK to your phone"
+          echo "   2. Enable 'Unknown sources' in Settings"
+          echo "   3. Install the APK"
+          echo "   4. Grant permissions for full functionality"
+          echo ""
+          echo "=========================================="
