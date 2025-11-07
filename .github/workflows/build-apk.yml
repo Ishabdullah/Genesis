@@ -102,6 +102,9 @@ jobs:
 
       - name: Build APK with Buildozer
         run: |
+          # Export aclocal path to help libffi find autoconf-archive macros
+          export ACLOCAL_PATH="/usr/share/aclocal:${ACLOCAL_PATH}"
+          export ACLOCAL="aclocal -I /usr/share/aclocal"
           # Build the APK (buildozer will handle SDK licenses automatically)
           buildozer -v android debug
 
