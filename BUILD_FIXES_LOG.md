@@ -114,26 +114,62 @@ This file tracks all attempted fixes for the Genesis Android APK build issues.
   - GitHub archive tarballs lack pre-generated configure scripts
   - Must either patch configure.ac OR use official release tarball
 
-### Attempt 11: Use Official libffi Release (Not GitHub Archive) 🎁 SMART SOLUTION
+### Attempt 11: Use Official libffi Release (Not GitHub Archive)
 - **Date:** 2025-11-07
 - **Config:** NDK 28c, custom p4a recipe using libffi 3.4.4 official release
-- **Status:** 🔄 IN PROGRESS (Build #20)
+- **Result:** ❌ FAILED - p4a ALWAYS runs autoreconf! (Build #20)
 - **Approach:** Use official release tarball instead of GitHub archive
   - Created custom recipe: `p4a-recipes/libffi/__init__.py`
   - Override URL: `https://github.com/libffi/libffi/releases/download/v3.4.4/libffi-3.4.4.tar.gz`
-  - Official releases include **pre-generated configure** script!
-  - No need to run autogen.sh, no autoconf issues
-  - Set `p4a.local_recipes = ./p4a-recipes`
+  - Official releases include pre-generated configure script
+- **Why it failed:**
+  - p4a's LibffiRecipe has autoreconf HARDCODED at line 29!
+  - Even with pre-generated configure, parent recipe runs autoreconf anyway
+  - Calling super().build_arch() triggers autoreconf on original configure.ac
+  - Same LT_SYS_SYMBOL_USCORE error
+- **Key discovery:**
+  - Our recipe loads (saw print message)
+  - But parent recipe always regenerates configure
+  - Need to patch configure.ac BEFORE parent runs autoreconf
+
+### Attempt 12: Patch configure.ac BEFORE Parent Runs Autoreconf 🎯 THE REAL FIX
+- **Date:** 2025-11-07
+- **Config:** NDK 28c, custom p4a recipe that patches source THEN calls parent
+- **Status:** 🔄 IN PROGRESS (Build #21)
+- **Approach:** Patch configure.ac in custom recipe BEFORE calling super()
+  - Updated `p4a-recipes/libffi/__init__.py` completely
+  - build_arch() now reads configure.ac from build directory
+  - Patches LT_SYS_SYMBOL_USCORE line BEFORE calling super()
+  - Parent's autoreconf runs on PATCHED configure.ac
+  - No autoreconf error!
 - **Why this should work:**
-  - Official release tarballs include generated files (configure, Makefile.in)
-  - p4a's LibffiRecipe will use pre-generated configure if available
-  - Skips autogen.sh entirely, avoiding all autoconf/automake issues
-  - libffi 3.4.4 is latest stable (March 2023), more recent than 3.4.2
-- **Technical details:**
-  - GitHub archive: `/archive/v3.4.2.tar.gz` - source only, no generated files
-  - Official release: `/releases/download/v3.4.4/libffi-3.4.4.tar.gz` - includes configure
-  - p4a checks if configure exists before running autogen.sh
-- **Hypothesis:** Pre-generated configure bypasses entire autoconf incompatibility!
+  - We intercept BEFORE parent's autoreconf call
+  - Patch the source file directly
+  - Parent runs autoreconf on patched file
+  - Modern autoconf processes patched file successfully
+- **Created BUILD_20_ANALYSIS.md:**
+  - Systematic error analysis
+  - Comparison of all 11 previous attempts
+  - 4 fix options ranked by priority
+  - Option A (this approach) selected as best
+- **Technical implementation:**
+  ```python
+  def build_arch(self, arch):
+      # Get build directory
+      build_dir = self.get_build_dir(arch.arch)
+      configure_ac_path = os.path.join(build_dir, 'configure.ac')
+
+      # Read and patch configure.ac
+      content = open(configure_ac_path).read()
+      patched = content.replace(
+          'if test "x$LT_SYS_SYMBOL_USCORE" = xyes; then',
+          '# PATCHED\nif test "xno" = xyes; then'
+      )
+      open(configure_ac_path, 'w').write(patched)
+
+      # NOW call parent (runs autoreconf on patched file)
+      super().build_arch(arch)
+  ```
 
 ## ⚠️ ROOT CAUSE IDENTIFIED (Updated After Attempt #9)
 
@@ -195,11 +231,12 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
 
 ## 📊 CURRENT STATUS
 
-**Total Attempts**: 11
-**Success Rate**: 0/10 (Attempt #11 in progress - Build #20)
-**Root Cause**: GitHub archive libffi lacks pre-generated configure, must run autogen.sh with modern autoconf
+**Total Attempts**: 12
+**Success Rate**: 0/11 (Attempt #12 in progress - Build #21)
+**Root Cause**: p4a's LibffiRecipe ALWAYS runs autoreconf (hardcoded), even with pre-generated configure
 **Blocker**: LT_SYS_SYMBOL_USCORE macro obsolete in autoconf 2.71+ (Ubuntu 24.04)
-**Current Strategy**: Use official libffi 3.4.4 release tarball (has pre-generated configure, skips autogen.sh)
+**Current Strategy**: Patch configure.ac in custom recipe BEFORE parent's autoreconf call
+**Build #20 Analysis**: Created comprehensive BUILD_20_ANALYSIS.md with systematic error review
 
 ## Build Configuration Summary
 
