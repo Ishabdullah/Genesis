@@ -17,6 +17,7 @@ jobs:
   build-apk:
     name: Build Android APK
     runs-on: ubuntu-latest
+    timeout-minutes: 90  # Buildozer builds can take a while
 
     steps:
       - name: Checkout repository
@@ -93,12 +94,13 @@ jobs:
           path: .buildozer
           key: buildozer-${{ hashFiles('buildozer.spec') }}
 
+      - name: Accept Android SDK licenses
+        run: |
+          yes | sdkmanager --licenses || true
+
       - name: Build APK with Buildozer
         run: |
-          # Accept Android SDK licenses
-          yes | buildozer android debug || true
-
-          # Build the APK
+          # Build the APK (buildozer will handle SDK licenses automatically)
           buildozer -v android debug
 
       - name: List built files

@@ -32,7 +32,8 @@ version = 2.3.0
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy,pillow,requests,colorama,prompt_toolkit,flask,psutil,certifi,charset-normalizer,idna,urllib3,pyjnius,android,plyer
+# Note: Only include packages compatible with Python-for-Android
+requirements = python3,kivy,pillow,requests,certifi,urllib3,pyjnius,android,plyer
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes

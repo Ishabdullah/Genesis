@@ -34,11 +34,13 @@ from accel_manager import AccelManager, get_accel_manager
 # Detect if this is a debug build
 DEBUG_MODE = os.environ.get('GENESIS_DEBUG', '1') == '1'  # Default to debug for APK debug builds
 
+# Try to import psutil (may not be available on Android)
 try:
     import psutil
     PSUTIL_AVAILABLE = True
 except ImportError:
     PSUTIL_AVAILABLE = False
+    print("Note: psutil not available, some debug features will be limited")
 
 
 class FuturisticTextInput(TextInput):
