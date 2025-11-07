@@ -22,6 +22,10 @@ class LibffiRecipePatched(LibffiRecipe):
     # Use latest stable libffi
     url = 'https://github.com/libffi/libffi/releases/download/v3.4.4/libffi-3.4.4.tar.gz'
 
+    # Override patches - we do our own patching in build_arch()
+    # Parent recipe has patches = ['remove-version-info.patch'] which we don't need
+    patches = []
+
     def build_arch(self, arch):
         """
         Patch ALL obsolete macros in configure.ac BEFORE parent runs autoreconf
