@@ -102,8 +102,8 @@ android.minapi = 21
 android.sdk = 33
 
 # (str) Android NDK version to use
-# Using 21e - buildozer will add 'r' prefix automatically
-android.ndk = 21e
+# Using 28c - recommended by p4a for best compatibility
+android.ndk = 28c
 
 # (bool) Use --private data storage (True) or --dir public storage (False)
 android.private_storage = True
@@ -258,8 +258,8 @@ android.allow_backup = True
 #p4a.fork = kivy
 
 # (str) python-for-android branch to use, defaults to master
-# Using develop branch for better compatibility with NDK r21e
-p4a.branch = develop
+# Using master branch for stability with NDK 25c
+p4a.branch = master
 
 # (str) python-for-android git clone directory (if empty, it will be automatically cloned from github)
 #p4a.source_dir =
