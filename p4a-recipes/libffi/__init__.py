@@ -10,12 +10,18 @@ from pythonforandroid.recipes.libffi import LibffiRecipe
 class LibffiRecipePatched(LibffiRecipe):
     """
     Custom libffi recipe that patches the LT_SYS_SYMBOL_USCORE macro CALL
+    and disables trampolines for Android compatibility
 
     Build #24 discovery: There is ONLY line 223 with LT_SYS_SYMBOL_USCORE!
     - No $ usage line exists in libffi 3.4.4
     - Just the macro call: LT_SYS_SYMBOL_USCORE
     - This macro is undefined in modern autoconf
     - Solution: Comment it out entirely
+
+    Build #25 discovery: Trampolines don't compile on Android!
+    - src/tramp.c:262: undefined function 'open_temp_exec_file'
+    - Trampolines not needed for Python/Kivy/pyjnius on Android
+    - Solution: Disable with --without-exec-trampoline
     """
 
     # Use latest stable libffi
@@ -23,6 +29,10 @@ class LibffiRecipePatched(LibffiRecipe):
 
     # Override patches - we do our own patching in build_arch()
     patches = []
+
+    # Disable trampolines for Android (Build #26 fix)
+    # Trampolines require executable memory mapping not available on Android
+    configured_args = ['--without-exec-trampoline']
 
     def build_arch(self, arch):
         """
@@ -33,7 +43,9 @@ class LibffiRecipePatched(LibffiRecipe):
         configure_ac_path = os.path.join(build_dir, 'configure.ac')
 
         print("=" * 70)
-        print("🔧 PATCHING LIBFFI - Comment out macro CALL (line 223)")
+        print("🔧 PATCHING LIBFFI - Build #26 (Two fixes)")
+        print("  Fix #1: Comment out LT_SYS_SYMBOL_USCORE macro (line 223)")
+        print("  Fix #2: Disable trampolines (--without-exec-trampoline)")
         print(f"📁 Build dir: {build_dir}")
         print("=" * 70)
 
@@ -94,10 +106,13 @@ class LibffiRecipePatched(LibffiRecipe):
                 print("  ✅ Patch applied successfully!")
 
         print("=" * 70)
-        print("📞 Calling parent build_arch (will run autoreconf on patched file)")
+        print("📞 Calling parent build_arch (will run autoreconf + configure + make)")
+        print(f"   Configure args: {self.configured_args}")
+        print("   Expected: autoreconf ✅ → configure ✅ → make ✅")
         print("=" * 70)
 
         # Now call parent which will run autoreconf on PATCHED configure.ac
+        # with --without-exec-trampoline flag to skip trampoline compilation
         super().build_arch(arch)
 
 
