@@ -15,11 +15,13 @@ class LibffiRecipePatched(LibffiRecipe):
     - Line 223 has obsolete macro undefined in autoconf 2.71+
     - Solution: Comment out the macro call
 
-    PATCH #2: Force disable trampolines at source level (Build #27)
+    PATCH #2: Remove tramp.c from Makefile.am (Build #28 - DIRECT FIX)
     - src/tramp.c uses open_temp_exec_file() not available on Android
-    - Build #26 tried configure flag but it wasn't applied
-    - Solution: Patch configure.ac to force enable_exec_trampoline=no
-    - This makes configure script skip trampoline code entirely
+    - Build #26 tried configure flag (didn't work - not applied)
+    - Build #27 tried shell vars in configure.ac (didn't work - wrong approach)
+    - Solution: Patch Makefile.am to exclude tramp.c from SOURCES
+    - When autoreconf runs, generated Makefile won't compile tramp.c
+    - This is the MOST DIRECT approach - removes problematic file from build
     """
 
     # Use latest stable libffi
@@ -30,18 +32,19 @@ class LibffiRecipePatched(LibffiRecipe):
 
     def build_arch(self, arch):
         """
-        Apply TWO patches to configure.ac:
-        1. Comment out LT_SYS_SYMBOL_USCORE macro call at line 223
-        2. Disable trampolines for Android (source-level disable)
+        Apply TWO patches BEFORE autoreconf:
+        1. Comment out LT_SYS_SYMBOL_USCORE macro call in configure.ac (line 223)
+        2. Remove tramp.c from Makefile.am SOURCES (direct exclusion)
         """
         # Get build directory where libffi source was extracted
         build_dir = self.get_build_dir(arch.arch)
         configure_ac_path = os.path.join(build_dir, 'configure.ac')
+        makefile_am_path = os.path.join(build_dir, 'Makefile.am')
 
         print("=" * 70)
-        print("🔧 PATCHING LIBFFI - Build #27 (Two source patches)")
-        print("  Fix #1: Comment out LT_SYS_SYMBOL_USCORE macro (line 223)")
-        print("  Fix #2: Disable trampolines at SOURCE level in configure.ac")
+        print("🔧 PATCHING LIBFFI - Build #28 (Direct Makefile.am patch)")
+        print("  Fix #1: Comment out LT_SYS_SYMBOL_USCORE macro (configure.ac line 223)")
+        print("  Fix #2: Remove tramp.c from Makefile.am SOURCES (direct exclusion)")
         print(f"📁 Build dir: {build_dir}")
         print("=" * 70)
 
@@ -62,7 +65,7 @@ class LibffiRecipePatched(LibffiRecipe):
 
         # Check if already patched
         if 'PATCHED BY GENESIS' in content:
-            print("✅ Already patched, skipping")
+            print("✅ configure.ac already patched, skipping")
         else:
             # PATCH #1: Comment out LT_SYS_SYMBOL_USCORE
             print("\n🔍 PATCH #1: Searching for LT_SYS_SYMBOL_USCORE macro call...")
@@ -87,94 +90,76 @@ class LibffiRecipePatched(LibffiRecipe):
             else:
                 print("  ✅ PATCH #1 applied successfully!")
 
-            # PATCH #2: Disable trampolines
-            print("\n🔍 PATCH #2: Disabling exec trampolines for Android...")
-            patch2_applied = False
-
-            # Strategy: Find AC_ARG_ENABLE([pax-emutramp] section and add
-            # a forced disable of exec trampolines right after
-            for i, line in enumerate(lines):
-                # Look for the line AFTER pax-emutramp section ends
-                # This is around line 221-228 area
-                if 'fi)' in line and i > 0:
-                    # Check if previous lines have pax-emutramp
-                    context = '\n'.join(lines[max(0, i-10):i])
-                    if 'pax' in context.lower() or 'emutramp' in context.lower():
-                        # Insert our trampoline disable AFTER this section
-                        insert_line = i + 1
-
-                        # Skip any blank lines
-                        while insert_line < len(lines) and lines[insert_line].strip() == '':
-                            insert_line += 1
-
-                        # Check if next line is LT_SYS or FFI_EXEC_TRAMPOLINE
-                        if insert_line < len(lines):
-                            next_line = lines[insert_line]
-
-                            # Insert BEFORE LT_SYS_SYMBOL_USCORE or at trampoline section
-                            if 'LT_SYS_SYMBOL_USCORE' in next_line or 'FFI_EXEC_TRAMPOLINE' in next_line:
-                                # Insert our disable code here
-                                disable_code = [
-                                    '',
-                                    '# PATCHED BY GENESIS: Disable exec trampolines for Android (Build #27)',
-                                    '# Trampolines require open_temp_exec_file() not available on Android',
-                                    '# Force disable regardless of platform detection',
-                                    'enable_exec_trampoline=no',
-                                    'ac_cv_func_mmap_exec=no',
-                                    ''
-                                ]
-
-                                # Insert the lines
-                                for offset, new_line in enumerate(disable_code):
-                                    lines.insert(insert_line + offset, new_line)
-
-                                print(f"  ✅ Inserted trampoline disable code at line {insert_line}")
-                                print(f"  📝 Added: enable_exec_trampoline=no")
-                                print(f"  📝 Added: ac_cv_func_mmap_exec=no")
-                                patch2_applied = True
-                                break
-
-            if not patch2_applied:
-                print("  ⚠️  PATCH #2: Could not find ideal insertion point")
-                print("  ⚠️  Trying alternative: Force disable at end of AC checks")
-
-                # Alternative: Find first occurrence of FFI_EXEC_TRAMPOLINE_TABLE and force it
-                for i, line in enumerate(lines):
-                    if 'FFI_EXEC_TRAMPOLINE_TABLE' in line and '=' in line:
-                        print(f"  ✅ Found FFI_EXEC_TRAMPOLINE_TABLE at line {i+1}")
-                        # Insert disable BEFORE this line
-                        disable_code = [
-                            '# PATCHED BY GENESIS: Force disable trampolines for Android',
-                            'enable_exec_trampoline=no',
-                            'ac_cv_func_mmap_exec=no',
-                            ''
-                        ]
-                        for offset, new_line in enumerate(disable_code):
-                            lines.insert(i + offset, new_line)
-                        print(f"  ✅ PATCH #2 applied at line {i+1}")
-                        patch2_applied = True
-                        break
-
-            if not patch2_applied:
-                print("  ❌ PATCH #2 FAILED: Could not disable trampolines")
-            else:
-                print("  ✅ PATCH #2 applied successfully!")
-
-            # Write patched file
-            if patch1_applied or patch2_applied:
+            # Write patched configure.ac
+            if patch1_applied:
                 with open(configure_ac_path, 'w') as f:
                     f.write('\n'.join(lines))
-                print("\n✅ All patches written to configure.ac")
+                print("  📝 Wrote patched configure.ac")
 
+        # PATCH #2: Remove tramp.c from Makefile.am
+        print("\n🔍 PATCH #2: Patching Makefile.am to exclude tramp.c...")
+
+        if not os.path.exists(makefile_am_path):
+            print(f"  ⚠️  WARNING: Makefile.am not found at {makefile_am_path}")
+            print("  ⚠️  Skipping Patch #2")
+            patch2_applied = False
+        else:
+            with open(makefile_am_path, 'r') as f:
+                makefile_content = f.read()
+
+            if 'GENESIS TRAMP PATCH' in makefile_content:
+                print("  ✅ Makefile.am already patched, skipping")
+                patch2_applied = True
+            else:
+                makefile_lines = makefile_content.split('\n')
+                patch2_applied = False
+                removed_count = 0
+
+                # Find and comment out all lines containing tramp
+                new_makefile_lines = []
+                for line in makefile_lines:
+                    if 'tramp' in line.lower() and ('src/' in line or '.lo' in line or '.c' in line):
+                        # This line references tramp source file
+                        if not line.strip().startswith('#'):
+                            new_makefile_lines.append('# GENESIS TRAMP PATCH: ' + line)
+                            removed_count += 1
+                            patch2_applied = True
+                        else:
+                            new_makefile_lines.append(line)
+                    else:
+                        new_makefile_lines.append(line)
+
+                if patch2_applied:
+                    # Write patched Makefile.am
+                    with open(makefile_am_path, 'w') as f:
+                        f.write('\n'.join(new_makefile_lines))
+                    print(f"  ✅ Removed {removed_count} tramp.c references from Makefile.am")
+                    print(f"  📝 Wrote patched Makefile.am")
+                    print("  ✅ PATCH #2 applied successfully!")
+                else:
+                    print("  ⚠️  No tramp references found in Makefile.am")
+                    print("  ⚠️  This might be OK if trampolines are conditionally included")
+
+        print("\n" + "=" * 70)
+        if patch1_applied and patch2_applied:
+            print("✅ ALL PATCHES APPLIED SUCCESSFULLY!")
+        elif patch1_applied:
+            print("⚠️  PATCH #1 applied, PATCH #2 skipped")
+        else:
+            print("❌ PATCHING FAILED!")
         print("=" * 70)
+
+        print("\n" + "=" * 70)
         print("📞 Calling parent build_arch (will run autoreconf + configure + make)")
-        print("   Trampolines disabled at SOURCE level (configure.ac patched)")
-        print("   Expected: autoreconf ✅ → configure ✅ → make ✅ (skip tramp.c)")
+        print("   PATCH #1: configure.ac line 223 commented (fixes autoreconf)")
+        print("   PATCH #2: Makefile.am tramp.c removed (fixes compilation)")
+        print("   Expected: autoreconf ✅ → configure ✅ → make ✅ (NO tramp.c!)")
         print("=" * 70)
 
-        # Now call parent which will run autoreconf on PATCHED configure.ac
-        # Our patches force trampolines to be disabled at source level
-        # This causes generated configure script to skip trampoline code
+        # Now call parent which will run autoreconf on PATCHED source files
+        # Patch #1: Fixes autoreconf (LT_SYS_SYMBOL_USCORE commented)
+        # Patch #2: Fixes make (tramp.c excluded from Makefile)
+        # This should complete the entire libffi build!
         super().build_arch(arch)
 
 
