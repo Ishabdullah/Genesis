@@ -160,26 +160,40 @@ class LibffiRecipePatched(LibffiRecipe):
                         print("  ✅ PATCH #2 applied successfully!")
                         patch2_applied = True
                     else:
-                        print("  ⚠️  Pattern not matched - tramp.c format might be different")
-                        print("  ⚠️  Trying alternative approach...")
+                        print("  ⚠️  Primary pattern not matched - tramp.c format might be different")
+                        print("  ⚠️  Trying fallback approach...")
 
-                        # Alternative: Just replace the function name to disable it
+                        # Fallback: Replace the entire assignment line
+                        # Find any line like: "fd = open_temp_exec_file(...)"
+                        # Replace with: "fd = -1; /* Android - function not available */"
                         if 'open_temp_exec_file' in tramp_content:
-                            tramp_content = tramp_content.replace(
-                                'open_temp_exec_file',
-                                '/* GENESIS: disabled */ open_temp_exec_file_DISABLED'
-                            )
-                            tramp_content = '/* GENESIS ANDROID PATCH: Disabled open_temp_exec_file for Android */\n' + tramp_content
-                            with open(tramp_c_path, 'w') as f:
-                                f.write(tramp_content)
-                            print("  ✅ Disabled open_temp_exec_file() calls (fallback method)")
-                            print("  📝 Wrote patched tramp.c")
+                            original_fallback = tramp_content
 
-                            # Verify fallback patch
-                            import hashlib
-                            hash_obj = hashlib.sha256(tramp_content.encode('utf-8'))
-                            print(f"  🔒 Fallback patch hash: {hash_obj.hexdigest()[:16]}...")
-                            patch2_applied = True
+                            # Pattern matches: [optional prefix.]fd = open_temp_exec_file(...);
+                            # Examples: "fd = open_temp_exec_file(...);" or "tramp_globals.fd = open_temp_exec_file(...);"
+                            fallback_pattern = r'(\s*)(\w+\.)?fd\s*=\s*open_temp_exec_file\s*\([^)]*\)\s*;'
+                            fallback_replacement = r'\1\2fd = -1;  /* GENESIS ANDROID PATCH: open_temp_exec_file not available on Android */'
+
+                            tramp_content = re.sub(fallback_pattern, fallback_replacement, tramp_content)
+
+                            if tramp_content != original_fallback:
+                                # Add header comment
+                                tramp_content = ('/* GENESIS ANDROID PATCH: Replaced open_temp_exec_file calls with fd = -1 */\n' +
+                                               tramp_content)
+
+                                with open(tramp_c_path, 'w') as f:
+                                    f.write(tramp_content)
+                                print("  ✅ Replaced open_temp_exec_file() calls with fd = -1 (fallback method)")
+                                print("  📝 Wrote patched tramp.c")
+
+                                # Verify fallback patch
+                                import hashlib
+                                hash_obj = hashlib.sha256(tramp_content.encode('utf-8'))
+                                print(f"  🔒 Fallback patch hash: {hash_obj.hexdigest()[:16]}...")
+                                patch2_applied = True
+                            else:
+                                print("  ❌ Fallback pattern also failed to match")
+                                print("  ⚠️  tramp.c may have unexpected format")
                 else:
                     print("  ⚠️  open_temp_exec_file not found in tramp.c")
                     print("  ⚠️  This might be OK if it's conditionally compiled")
