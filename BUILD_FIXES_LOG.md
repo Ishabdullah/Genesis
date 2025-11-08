@@ -375,18 +375,20 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
   - Build #37: `242b05d` - Fix class name (didn't work)
   - Build #38: `1a56dfb` - Dynamic import approach
 
-### Attempt 28-31: HarfBuzz Pragma vs -Werror (Builds #39-41) ⚙️ IN PROGRESS
+### Attempt 28-32: HarfBuzz Pragma vs -Werror (Builds #39-42) ⚙️ IN PROGRESS
 - **Date:** 2025-11-08
 - **Config:** NDK 28c, testing different HarfBuzz patch approaches
-- **Result:** ⚙️ IN PROGRESS - Android.mk approach testing (Build #41)
+- **Result:** ⚙️ IN PROGRESS - Android.mk LOCAL_CPPFLAGS approach testing (Build #42)
 - **Problem:** Pragma directives not working despite being applied
 - **Error:** `cast from 'void (*)(FT_Face)' to 'FT_Generic_Finalizer' converts to incompatible function type [-Werror,-Wcast-function-type-strict]`
-- **Key Discovery:** `-Werror` elevates warnings to errors, pragma can't override
-- **Evidence:** Line numbers shifted (762→763) proving pragma was added but ineffective
+- **Key Discovery #1:** `-Werror` elevates warnings to errors, pragma can't override
+- **Key Discovery #2:** hb-ft.cc is C++ (.cc extension), needs LOCAL_CPPFLAGS not LOCAL_CFLAGS
+- **Evidence:** Line numbers shifted (762→763→759) tracking pragma removal and flag changes
 - **Attempted Solutions:**
   - Build #39: `9492807` - Corrected path to SDL2 bootstrap directory
   - Build #40: `6f70ecb` - Pragma push/pop pattern (still failed)
-  - Build #41: `1b35ebd` - Android.mk compiler flag approach ⚙️ TESTING
+  - Build #41: `1b35ebd` - Android.mk LOCAL_CFLAGS approach (wrong - C only)
+  - Build #42: `edd3e85` - Android.mk LOCAL_CPPFLAGS approach ⚙️ TESTING
 - **Build #39 Analysis:**
   - Wrong path: Used `self.get_build_dir()` which gave SDL2_ttf recipe dir
   - Correct path: `bootstrap_builds/sdl2/jni/SDL2_ttf/external/harfbuzz/`
@@ -395,33 +397,44 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
   - Used pragma push/pop pattern (recommended approach)
   - Errors now at lines 763, 769, 1039 (shifted by +1)
   - This proves pragma was added but can't suppress -Werror elevated warnings
-- **Build #41 Strategy:** Modify Android.mk makefile
+- **Build #41 Analysis:**
+  - Used Android.mk with LOCAL_CFLAGS (correct approach for C files)
+  - Errors now at lines 759, 765, 1035 (back to original - pragma removed)
+  - Flags visible in compile command but still failing
+  - **Critical realization:** LOCAL_CFLAGS only applies to C files (.c)
+  - hb-ft.cc is C++ (.cc extension), needs LOCAL_CPPFLAGS!
+- **Build #42 Strategy:** Modify Android.mk to add flags to both CFLAGS and CPPFLAGS
   - File: `bootstrap_builds/sdl2/jni/SDL2_ttf/external/harfbuzz/Android.mk`
   - Add: `LOCAL_CFLAGS += -Wno-error=cast-function-type-strict -Wno-cast-function-type-strict`
-  - Rationale: Downgrade warning before -Werror can elevate it
-  - This is the NDK-native way to handle compiler warnings
+  - Add: `LOCAL_CPPFLAGS += -Wno-error=cast-function-type-strict -Wno-cast-function-type-strict`
+  - Rationale: C++ files require CPPFLAGS, not just CFLAGS
+  - This is the correct NDK build system approach for C++ compilation
 - **Technical Details:**
-  - Error lines: hb-ft.cc:763, 769, 1039
+  - Error lines: hb-ft.cc:759, 765, 1035 (Build #41-42)
   - Cast: `void (*)(FT_Face)` → `FT_Generic_Finalizer` (aka `void (*)(void *)`)
-  - Compiler: clang with `-Werror=format-security`
+  - Compiler: clang++ (C++ compiler, not clang)
+  - File extension: .cc (C++, not .c)
 - **Commits:**
   - Build #39: `9492807` - Correct HarfBuzz path in SDL2 bootstrap build
   - Build #40: `6f70ecb` - Use pragma push/pop to override -Werror for HarfBuzz
   - Build #41: `1b35ebd` - Modify Android.mk to suppress HarfBuzz cast warnings
+  - Build #42: `edd3e85` - Add LOCAL_CPPFLAGS for HarfBuzz C++ compilation
 
 ## 📊 CURRENT STATUS (Updated 2025-11-08)
 
-**Total Attempts**: 31
-**Success Rate**: 3/31 (libffi ✅, SDL2 ✅, HarfBuzz ⚙️ testing)
+**Total Attempts**: 32
+**Success Rate**: 3/32 (libffi ✅, SDL2 ✅, HarfBuzz ⚙️ testing)
 **Root Cause #1**: LT_SYS_SYMBOL_USCORE macro obsolete in autoconf 2.71+ ✅ FIXED (Build #30)
 **Root Cause #2**: src/tramp.c uses open_temp_exec_file() not available on Android ✅ FIXED (Build #30)
 **Root Cause #3**: SDL2 ALooper_pollAll deprecated in NDK r28+ ✅ FIXED (Build #34)
-**Root Cause #4**: HarfBuzz function pointer casts too strict in NDK r28+ ⚙️ TESTING (Build #41 - Android.mk approach)
+**Root Cause #4**: HarfBuzz function pointer casts too strict in NDK r28+ ⚙️ TESTING (Build #42 - LOCAL_CPPFLAGS)
 **Root Cause #5**: SDL2_ttf class name unknown (p4a version-dependent) ✅ FIXED (Build #38 - dynamic import)
 
-**Current Strategy**: Android.mk compiler flag modification (Build #41)
-**Latest Commit**: `1b35ebd` - Modify Android.mk to suppress HarfBuzz cast warnings
-**Key Insight**: Pragma directives fail when -Werror elevates warnings to errors!
+**Current Strategy**: Android.mk LOCAL_CPPFLAGS modification (Build #42)
+**Latest Commit**: `edd3e85` - Add LOCAL_CPPFLAGS for HarfBuzz C++ compilation
+**Key Insights**:
+- Pragma directives fail when -Werror elevates warnings to errors
+- C++ files (.cc) need LOCAL_CPPFLAGS, not LOCAL_CFLAGS in Android.mk!
 
 ## Build Configuration Summary
 
