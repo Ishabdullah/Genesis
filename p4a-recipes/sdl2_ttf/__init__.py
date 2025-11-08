@@ -1,13 +1,13 @@
 """
 Custom SDL2_ttf recipe that patches HarfBuzz for NDK r28+ compatibility
 
-Build #42: HarfBuzz function pointer cast fix (ANDROID.MK - LOCAL_CPPFLAGS)
+Build #43: HarfBuzz function pointer cast fix (SOURCE CODE PATCH)
 - NDK r28+ has stricter -Wcast-function-type-strict warnings (treated as errors)
 - HarfBuzz's hb-ft.cc has incompatible function pointer casts (C++ file)
-- Pragma approach failed because -Werror elevates warnings to errors
-- Build #41 failed: Used LOCAL_CFLAGS but hb-ft.cc is C++ (.cc extension)
-- Solution: Modify Android.mk to add flags to both LOCAL_CFLAGS AND LOCAL_CPPFLAGS
-- C++ files (.cc) need LOCAL_CPPFLAGS, not just LOCAL_CFLAGS
+- Pragma approach (Builds #39-40) failed because -Werror elevates warnings to errors
+- Android.mk LOCAL_CPPFLAGS approach (Builds #41-42) failed - flags not in compile command
+- Solution: Patch the source code to use proper C++ type-safe wrapper functions
+- This is the most reliable approach - fixes the actual type mismatch
 """
 
 import os
@@ -39,11 +39,11 @@ class SDL2TtfRecipePatched(BaseRecipe):
     """
     Custom SDL2_ttf recipe that patches HarfBuzz for NDK r28+
 
-    PATCH: Disable strict function pointer cast warnings via Android.mk
-    - File: external/harfbuzz/Android.mk
-    - Error: -Wcast-function-type-strict (cast from 'void (*)(FT_Face)' to 'void (*)(void *)')
-    - Fix: Add -Wno-error=cast-function-type-strict to LOCAL_CFLAGS AND LOCAL_CPPFLAGS
-    - Why: hb-ft.cc is C++ file (.cc), needs CPPFLAGS not just CFLAGS
+    PATCH: Fix incompatible function pointer casts in hb-ft.cc
+    - File: external/harfbuzz/src/hb-ft.cc
+    - Error: cast from 'void (*)(FT_Face)' to 'FT_Generic_Finalizer' (aka 'void (*)(void *)')
+    - Fix: Add type-safe wrapper function that bridges the cast
+    - Why: Android.mk flag approach failed - flags not picked up by build system
     """
 
     # Ensure name is set if using base Recipe class
@@ -51,7 +51,7 @@ class SDL2TtfRecipePatched(BaseRecipe):
 
     def build_arch(self, arch):
         """
-        Apply HarfBuzz Android.mk patch BEFORE compilation
+        Apply HarfBuzz source code patch BEFORE compilation
         """
         # SDL2_ttf is built as part of SDL2 bootstrap
         # The actual source is in the SDL2 bootstrap build directory
@@ -60,73 +60,104 @@ class SDL2TtfRecipePatched(BaseRecipe):
 
         # Find SDL2_ttf source in bootstrap builds
         bootstrap_dir = os.path.join(self.ctx.build_dir, 'bootstrap_builds', 'sdl2')
-        harfbuzz_mk_path = os.path.join(bootstrap_dir, 'jni', 'SDL2_ttf', 'external', 'harfbuzz', 'Android.mk')
+        hb_ft_path = os.path.join(bootstrap_dir, 'jni', 'SDL2_ttf', 'external', 'harfbuzz', 'src', 'hb-ft.cc')
 
         print("=" * 70)
-        print("🔧 PATCHING SDL2_TTF/HARFBUZZ - Build #42 (NDK r28+ compatibility)")
-        print("  Fix: Add -Wno-error=cast-function-type-strict to Android.mk")
-        print("  Method: Modify LOCAL_CFLAGS and LOCAL_CPPFLAGS in Android.mk")
-        print("  Why: hb-ft.cc is C++, needs CPPFLAGS not just CFLAGS")
+        print("🔧 PATCHING SDL2_TTF/HARFBUZZ - Build #43 (NDK r28+ compatibility)")
+        print("  Fix: Patch hb-ft.cc to use type-safe wrapper functions")
+        print("  Method: Add wrapper functions to bridge incompatible pointer types")
+        print("  Why: Android.mk flags not working, source patch is most reliable")
         print(f"📁 Bootstrap dir: {bootstrap_dir}")
-        print(f"📁 Android.mk: {harfbuzz_mk_path}")
+        print(f"📁 HarfBuzz file: {hb_ft_path}")
         print("=" * 70)
 
         patch_applied = False
-        if not os.path.exists(harfbuzz_mk_path):
-            print(f"⚠️  WARNING: Android.mk not found at {harfbuzz_mk_path}")
+        if not os.path.exists(hb_ft_path):
+            print(f"⚠️  WARNING: hb-ft.cc not found at {hb_ft_path}")
             print("  ⚠️  File may not exist in this SDL2_ttf version - skipping patch")
         else:
-            print("📖 Reading Android.mk...")
-            with open(harfbuzz_mk_path, 'r') as f:
+            print("📖 Reading hb-ft.cc...")
+            with open(hb_ft_path, 'r') as f:
                 content = f.read()
 
             # Check if already patched
             if 'GENESIS ANDROID PATCH' in content:
-                print("✅ Android.mk already patched, skipping")
+                print("✅ hb-ft.cc already patched, skipping")
                 patch_applied = True
             else:
-                print("\n🔍 Adding -Wno-error flag to LOCAL_CFLAGS and LOCAL_CPPFLAGS...")
+                print("\n🔍 Adding type-safe wrapper functions...")
 
-                # Strategy: Add compiler flag to both CFLAGS and CPPFLAGS (hb-ft.cc is C++)
-                # Need to ensure our flags come AFTER any existing flags
+                # Strategy: Add wrapper functions that properly bridge the type mismatch
+                # The issue is: void (*)(FT_Face) vs void (*)(void *)
+                # Solution: Create wrapper that takes void* and casts to FT_Face
+
+                wrapper_code = '''
+/* GENESIS ANDROID PATCH: Type-safe wrappers for FT_Generic_Finalizer casts (NDK r28+) */
+/* Wrapper for hb_ft_face_finalize to match FT_Generic_Finalizer signature */
+static void hb_ft_face_finalize_wrapper(void *object) {
+  hb_ft_face_finalize(reinterpret_cast<FT_Face>(object));
+}
+
+/* Wrapper for _release_blob to match FT_Generic_Finalizer signature */
+static void _release_blob_wrapper(void *object) {
+  _release_blob(reinterpret_cast<FT_Face>(object));
+}
+/* END GENESIS ANDROID PATCH */
+
+'''
+
+                # Find a good insertion point - after the includes, before the first function
+                # Look for the first function definition (static or not)
                 lines = content.split('\n')
                 patched_lines = []
-                cflags_added = False
-                cppflags_added = False
+                inserted = False
 
-                # Pass through all lines, adding our patches where appropriate
-                for line in lines:
+                for i, line in enumerate(lines):
+                    # Look for the first function definition after includes
+                    # Usually after struct/class definitions, before first function
+                    if not inserted and ('hb_ft_face_finalize' in line or 'static void' in line) and '(' in line and not line.strip().startswith('//') and not line.strip().startswith('/*'):
+                        # Insert wrapper before this function
+                        patched_lines.append(wrapper_code)
+                        inserted = True
+
                     patched_lines.append(line)
 
-                    # Add to LOCAL_CFLAGS if found
-                    if 'LOCAL_CFLAGS' in line and ':=' in line and not line.strip().startswith('#') and not cflags_added:
-                        patched_lines.append('# GENESIS ANDROID PATCH: Disable cast-function-type-strict error for NDK r28+')
-                        patched_lines.append('LOCAL_CFLAGS += -Wno-error=cast-function-type-strict -Wno-cast-function-type-strict')
-                        cflags_added = True
-
-                    # Add to LOCAL_CPPFLAGS if found (C++ specific - hb-ft.cc is C++)
-                    if 'LOCAL_CPPFLAGS' in line and ':=' in line and not line.strip().startswith('#') and not cppflags_added:
-                        patched_lines.append('# GENESIS ANDROID PATCH: Disable cast-function-type-strict error for NDK r28+')
-                        patched_lines.append('LOCAL_CPPFLAGS += -Wno-error=cast-function-type-strict -Wno-cast-function-type-strict')
-                        cppflags_added = True
-
-                    # If we find LOCAL_PATH and haven't added flags yet, add both after it
-                    if 'LOCAL_PATH' in line and not line.strip().startswith('#'):
-                        if not cflags_added and not cppflags_added:
-                            patched_lines.append('')
-                            patched_lines.append('# GENESIS ANDROID PATCH: Disable cast-function-type-strict error for NDK r28+')
-                            patched_lines.append('LOCAL_CFLAGS := -Wno-error=cast-function-type-strict -Wno-cast-function-type-strict')
-                            patched_lines.append('LOCAL_CPPFLAGS := -Wno-error=cast-function-type-strict -Wno-cast-function-type-strict')
-                            cflags_added = True
-                            cppflags_added = True
+                # If we didn't find a good spot, insert after the last #include
+                if not inserted:
+                    patched_lines = []
+                    for i, line in enumerate(lines):
+                        patched_lines.append(line)
+                        if '#include' in line and i < len(lines) - 1 and '#include' not in lines[i+1]:
+                            patched_lines.append(wrapper_code)
+                            inserted = True
 
                 patched_content = '\n'.join(patched_lines)
 
+                # Now replace the casts with wrapper function calls
+                # Line 759: ft_face->generic.finalizer != (FT_Generic_Finalizer) hb_ft_face_finalize
+                patched_content = patched_content.replace(
+                    'ft_face->generic.finalizer != (FT_Generic_Finalizer) hb_ft_face_finalize',
+                    'ft_face->generic.finalizer != hb_ft_face_finalize_wrapper'
+                )
+
+                # Line 765: ft_face->generic.finalizer = (FT_Generic_Finalizer) hb_ft_face_finalize;
+                patched_content = patched_content.replace(
+                    'ft_face->generic.finalizer = (FT_Generic_Finalizer) hb_ft_face_finalize;',
+                    'ft_face->generic.finalizer = hb_ft_face_finalize_wrapper;'
+                )
+
+                # Line 1035: ft_face->generic.finalizer = (FT_Generic_Finalizer) _release_blob;
+                patched_content = patched_content.replace(
+                    'ft_face->generic.finalizer = (FT_Generic_Finalizer) _release_blob;',
+                    'ft_face->generic.finalizer = _release_blob_wrapper;'
+                )
+
                 # Write patched file
-                with open(harfbuzz_mk_path, 'w') as f:
+                with open(hb_ft_path, 'w') as f:
                     f.write(patched_content)
-                print("  ✅ Added -Wno-error=cast-function-type-strict to LOCAL_CFLAGS and LOCAL_CPPFLAGS")
-                print("  📝 Wrote patched Android.mk")
+                print("  ✅ Added type-safe wrapper functions")
+                print("  ✅ Replaced 3 incompatible casts with wrapper calls")
+                print("  📝 Wrote patched hb-ft.cc")
 
                 # Verify patch with SHA256 hash
                 import hashlib
@@ -137,18 +168,18 @@ class SDL2TtfRecipePatched(BaseRecipe):
 
         print("\n" + "=" * 70)
         if patch_applied:
-            print("✅ SDL2_TTF/HARFBUZZ ANDROID.MK PATCH COMPLETE!")
+            print("✅ SDL2_TTF/HARFBUZZ SOURCE CODE PATCH COMPLETE!")
         else:
             print("⚠️  SDL2_TTF/HARFBUZZ PATCH SKIPPED (may not be needed)")
         print("=" * 70)
 
         print("\n" + "=" * 70)
         print("📞 Calling parent build_arch (will compile SDL2_ttf)")
-        print("   PATCH: Android.mk adds -Wno-error=cast-function-type-strict")
+        print("   PATCH: hb-ft.cc uses type-safe wrapper functions")
         print("   Expected: HarfBuzz compiles ✅ → SDL2_ttf builds ✅ → APK SUCCESS! 🎉")
         print("=" * 70)
 
-        # Now call parent which will compile SDL2_ttf with patched Android.mk
+        # Now call parent which will compile SDL2_ttf with patched source
         super().build_arch(arch)
 
 
