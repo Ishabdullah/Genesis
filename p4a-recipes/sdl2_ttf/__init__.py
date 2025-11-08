@@ -1,12 +1,13 @@
 """
 Custom SDL2_ttf recipe that patches HarfBuzz for NDK r28+ compatibility
 
-Build #43: HarfBuzz function pointer cast fix (SOURCE CODE PATCH)
+Build #44: HarfBuzz function pointer cast fix (SOURCE CODE PATCH - FIXED PLACEMENT)
 - NDK r28+ has stricter -Wcast-function-type-strict warnings (treated as errors)
 - HarfBuzz's hb-ft.cc has incompatible function pointer casts (C++ file)
 - Pragma approach (Builds #39-40) failed because -Werror elevates warnings to errors
 - Android.mk LOCAL_CPPFLAGS approach (Builds #41-42) failed - flags not in compile command
-- Solution: Patch the source code to use proper C++ type-safe wrapper functions
+- Build #43 failed: Wrapper functions inserted BEFORE the functions they call
+- Solution: Insert wrapper functions AFTER the original function definitions
 - This is the most reliable approach - fixes the actual type mismatch
 """
 
@@ -63,10 +64,10 @@ class SDL2TtfRecipePatched(BaseRecipe):
         hb_ft_path = os.path.join(bootstrap_dir, 'jni', 'SDL2_ttf', 'external', 'harfbuzz', 'src', 'hb-ft.cc')
 
         print("=" * 70)
-        print("🔧 PATCHING SDL2_TTF/HARFBUZZ - Build #43 (NDK r28+ compatibility)")
+        print("🔧 PATCHING SDL2_TTF/HARFBUZZ - Build #44 (NDK r28+ compatibility)")
         print("  Fix: Patch hb-ft.cc to use type-safe wrapper functions")
-        print("  Method: Add wrapper functions to bridge incompatible pointer types")
-        print("  Why: Android.mk flags not working, source patch is most reliable")
+        print("  Method: Insert wrappers AFTER function definitions (not before)")
+        print("  Why: Build #43 inserted wrappers before functions were defined")
         print(f"📁 Bootstrap dir: {bootstrap_dir}")
         print(f"📁 HarfBuzz file: {hb_ft_path}")
         print("=" * 70)
@@ -106,30 +107,60 @@ static void _release_blob_wrapper(void *object) {
 
 '''
 
-                # Find a good insertion point - after the includes, before the first function
-                # Look for the first function definition (static or not)
+                # Find where _release_blob function ends
+                # Look for the closing brace of _release_blob function
+                # Then insert our wrappers right after it
                 lines = content.split('\n')
                 patched_lines = []
                 inserted = False
+                in_release_blob = False
+                brace_count = 0
 
                 for i, line in enumerate(lines):
-                    # Look for the first function definition after includes
-                    # Usually after struct/class definitions, before first function
-                    if not inserted and ('hb_ft_face_finalize' in line or 'static void' in line) and '(' in line and not line.strip().startswith('//') and not line.strip().startswith('/*'):
-                        # Insert wrapper before this function
-                        patched_lines.append(wrapper_code)
-                        inserted = True
-
                     patched_lines.append(line)
 
-                # If we didn't find a good spot, insert after the last #include
-                if not inserted:
-                    patched_lines = []
-                    for i, line in enumerate(lines):
-                        patched_lines.append(line)
-                        if '#include' in line and i < len(lines) - 1 and '#include' not in lines[i+1]:
+                    # Detect start of _release_blob function
+                    if not inserted and '_release_blob' in line and '(' in line and '{' not in line:
+                        in_release_blob = True
+                        brace_count = 0
+
+                    # Count braces when inside _release_blob
+                    if in_release_blob:
+                        brace_count += line.count('{')
+                        brace_count -= line.count('}')
+
+                        # When we close all braces, the function has ended
+                        if brace_count == 0 and '}' in line:
+                            # Insert wrappers right after _release_blob ends
                             patched_lines.append(wrapper_code)
                             inserted = True
+                            in_release_blob = False
+
+                # If we didn't find _release_blob, insert after hb_ft_face_finalize
+                if not inserted:
+                    patched_lines = []
+                    in_finalize = False
+                    brace_count = 0
+
+                    for i, line in enumerate(lines):
+                        patched_lines.append(line)
+
+                        # Detect start of hb_ft_face_finalize function
+                        if not inserted and 'hb_ft_face_finalize' in line and '(' in line:
+                            in_finalize = True
+                            brace_count = 0
+
+                        # Count braces when inside function
+                        if in_finalize:
+                            brace_count += line.count('{')
+                            brace_count -= line.count('}')
+
+                            # When we close all braces, the function has ended
+                            if brace_count == 0 and '}' in line:
+                                # Insert wrappers right after function ends
+                                patched_lines.append(wrapper_code)
+                                inserted = True
+                                in_finalize = False
 
                 patched_content = '\n'.join(patched_lines)
 
