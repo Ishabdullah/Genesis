@@ -61,9 +61,9 @@ class SDL2TtfRecipePatched(BaseRecipe):
         hb_ft_path = os.path.join(bootstrap_dir, 'jni', 'SDL2_ttf', 'external', 'harfbuzz', 'src', 'hb-ft.cc')
 
         print("=" * 70)
-        print("🔧 PATCHING SDL2_TTF/HARFBUZZ - Build #39 (NDK r28+ compatibility)")
+        print("🔧 PATCHING SDL2_TTF/HARFBUZZ - Build #40 (NDK r28+ compatibility)")
         print("  Fix: Disable -Wcast-function-type-strict in hb-ft.cc")
-        print("  Method: #pragma clang diagnostic (simple & reliable)")
+        print("  Method: #pragma clang diagnostic push/pop (overrides -Werror)")
         print(f"📁 Bootstrap dir: {bootstrap_dir}")
         print(f"📁 HarfBuzz file: {hb_ft_path}")
         print("=" * 70)
@@ -84,15 +84,21 @@ class SDL2TtfRecipePatched(BaseRecipe):
             else:
                 print("\n🔍 Adding pragma to disable cast warning...")
 
-                # Strategy: Add #pragma at the very top of the file
-                # This is the simplest and most reliable approach
+                # Strategy: Use proper pragma push/pop to override -Werror
+                # This works even when the warning is elevated to an error
                 pragma_directive = '''/* GENESIS ANDROID PATCH: Disable strict function pointer cast warnings for NDK r28+ */
+#pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-function-type-strict"
 
 '''
 
+                # Also add pop at the end of file
+                pragma_pop = '''
+#pragma clang diagnostic pop
+'''
+
                 # Prepend pragma to file content
-                patched_content = pragma_directive + content
+                patched_content = pragma_directive + content + pragma_pop
 
                 # Write patched file
                 with open(hb_ft_path, 'w') as f:
