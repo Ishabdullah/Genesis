@@ -1,10 +1,11 @@
 """
 Custom SDL2 recipe that patches for NDK r28+ compatibility
 
-Build #31: SDL2 ALooper_pollAll deprecation fix
+Build #33: SDL2 ALooper_pollAll deprecation fix (CORRECTED PATH)
 - NDK r28+ marks ALooper_pollAll as unavailable
 - SDL2's Android sensor code uses deprecated function
 - Solution: Patch to use ALooper_pollOnce instead
+- FIX: Corrected path from src/core/android to src/sensor/android
 """
 
 import os
@@ -16,7 +17,7 @@ class LibSDL2RecipePatched(LibSDL2Recipe):
     Custom SDL2 recipe that patches Android sensor backend for NDK r28+
 
     PATCH: Replace ALooper_pollAll with ALooper_pollOnce
-    - File: src/core/android/SDL_androidsensor.c
+    - File: src/sensor/android/SDL_androidsensor.c
     - Line: ~164 (may vary by SDL2 version)
     - Error: 'ALooper_pollAll' is unavailable in NDK r28+
     - Fix: Use ALooper_pollOnce instead (recommended replacement)
@@ -28,11 +29,12 @@ class LibSDL2RecipePatched(LibSDL2Recipe):
         """
         # Get build directory where SDL2 source was extracted
         build_dir = self.get_build_dir(arch.arch)
-        sensor_c_path = os.path.join(build_dir, 'src', 'core', 'android', 'SDL_androidsensor.c')
+        sensor_c_path = os.path.join(build_dir, 'src', 'sensor', 'android', 'SDL_androidsensor.c')
 
         print("=" * 70)
-        print("🔧 PATCHING SDL2 - Build #31 (NDK r28+ compatibility)")
+        print("🔧 PATCHING SDL2 - Build #33 (NDK r28+ compatibility)")
         print("  Fix: Replace ALooper_pollAll with ALooper_pollOnce")
+        print("  CORRECTED PATH: src/sensor/android/SDL_androidsensor.c")
         print(f"📁 Build dir: {build_dir}")
         print("=" * 70)
 
