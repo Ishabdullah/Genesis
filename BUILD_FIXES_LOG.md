@@ -321,15 +321,73 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
 2. **Medium-term**: Create a custom p4a recipe fork with updated libffi
 3. **Long-term**: Consider migrating to BeeWare/Briefcase for better mobile support
 
-## 📊 CURRENT STATUS
+### Attempt 23-24: SDL2 ALooper_pollAll NDK r28+ Fix (Builds #31-34) ✅ SUCCESS
+- **Date:** 2025-11-08
+- **Config:** NDK 28c, custom SDL2 recipe for ALooper compatibility
+- **Result:** ✅ PARTIAL SUCCESS - libffi compiles, SDL2 patches successfully
+- **New Problem:** SDL2's Android sensor code uses deprecated `ALooper_pollAll`
+- **Error:** `'ALooper_pollAll' is unavailable: obsoleted in Android 1`
+- **Solution:** Custom SDL2 recipe (`p4a-recipes/sdl2/__init__.py`)
+  - Replaces `ALooper_pollAll` with `ALooper_pollOnce` (NDK r28+ compatible)
+  - Simple string replacement in SDL_androidsensor.c
+- **Commits:**
+  - Build #32: `665cbe3` - Initial SDL2 patch (wrong path)
+  - Build #33: `19a6e04` - Correct path from `src/core/android` to `src/sensor/android`
+  - Build #34: `c91e22c` - Applied to production branch
 
-**Total Attempts**: 22
-**Success Rate**: 0/21 (Attempt #22 in progress - Build #30)
-**Root Cause #1**: LT_SYS_SYMBOL_USCORE macro obsolete in autoconf 2.71+ (Ubuntu 24.04) ✅ FIXED
-**Root Cause #2**: src/tramp.c uses open_temp_exec_file() not available on Android ⚙️ IN PROGRESS
-**Current Strategy**: Source-level patching (wrap open_temp_exec_file with Android guards)
-**Latest Analysis**: BUILD_30_ANALYSIS.md - ChatGPT approach (patch source, not build files)
-**Key Insight**: Don't fight the build system - make the source Android-compatible instead!
+### Attempt 25: HarfBuzz Function Pointer Cast Fix (Builds #35-36) ✅ SUCCESS
+- **Date:** 2025-11-08
+- **Config:** NDK 28c, custom SDL2_ttf recipe for HarfBuzz compatibility
+- **Result:** ✅ SUCCESS - Simplified pragma approach
+- **New Problem:** HarfBuzz (SDL2_ttf dependency) has strict cast errors
+- **Error:** `cast from 'void (*)(FT_Face)' to 'void (*)(void *)' converts to incompatible function type`
+- **Solution:** Custom SDL2_ttf recipe (`p4a-recipes/sdl2_ttf/__init__.py`)
+  - Build #35: Complex wrapper functions (over-engineered)
+  - Build #36: Simple `#pragma clang diagnostic ignored` directive ✅ BETTER
+  - Prepends pragma to hb-ft.cc before compilation
+- **Commits:**
+  - Build #35: `4938bac` - Wrapper function approach
+  - Build #36: `9ec9736` - Simplified pragma directive
+
+### Attempt 26-27: SDL2_ttf Import Issues (Builds #37-38) 🔄 IN PROGRESS
+- **Date:** 2025-11-08
+- **Config:** NDK 28c, dynamic import for SDL2_ttf base class
+- **Result:** 🔄 IN PROGRESS - Testing dynamic import approach
+- **Problem:** ImportError - p4a's SDL2_ttf class name unknown
+- **Error:** `cannot import name 'SDL2TtfRecipe' from 'pythonforandroid.recipes.sdl2_ttf'`
+- **Root Cause:** p4a's internal class name varies by version
+- **Attempted Names:**
+  - `LibSDL2_ttfRecipe` ❌ (Build #35-37)
+  - `SDL2TtfRecipe` ❌ (Build #37)
+  - Dynamic discovery approach ⚙️ (Build #38)
+- **Solution:** Dynamic import with fallback chain
+  ```python
+  # Try multiple names
+  for name in ['SDL2TtfRecipe', 'LibSDL2_ttfRecipe', 'Sdl2TtfRecipe']:
+      if hasattr(module, name):
+          BaseRecipe = getattr(module, name)
+          break
+  else:
+      # Fallback to base Recipe class
+      BaseRecipe = Recipe
+  ```
+- **Commits:**
+  - Build #37: `242b05d` - Fix class name (didn't work)
+  - Build #38: `1a56dfb` - Dynamic import approach
+
+## 📊 CURRENT STATUS (Updated 2025-11-08)
+
+**Total Attempts**: 27
+**Success Rate**: 3/27 (libffi ✅, SDL2 ✅, HarfBuzz ✅, SDL2_ttf ⚙️ testing)
+**Root Cause #1**: LT_SYS_SYMBOL_USCORE macro obsolete in autoconf 2.71+ ✅ FIXED (Build #30)
+**Root Cause #2**: src/tramp.c uses open_temp_exec_file() not available on Android ✅ FIXED (Build #30)
+**Root Cause #3**: SDL2 ALooper_pollAll deprecated in NDK r28+ ✅ FIXED (Build #34)
+**Root Cause #4**: HarfBuzz function pointer casts too strict in NDK r28+ ✅ FIXED (Build #36)
+**Root Cause #5**: SDL2_ttf class name unknown (p4a version-dependent) ⚙️ IN PROGRESS (Build #38)
+
+**Current Strategy**: Dynamic import to handle p4a version differences
+**Latest Commit**: `1a56dfb` - Dynamic import for SDL2_ttf base class
+**Key Insight**: NDK r28+ requires multiple compatibility patches across the dependency chain!
 
 ## Build Configuration Summary
 
