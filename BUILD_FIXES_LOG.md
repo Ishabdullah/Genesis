@@ -375,16 +375,17 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
   - Build #37: `242b05d` - Fix class name (didn't work)
   - Build #38: `1a56dfb` - Dynamic import approach
 
-### Attempt 28-34: HarfBuzz Multiple Approaches (Builds #39-44) ⚙️ IN PROGRESS
+### Attempt 28-35: HarfBuzz Multiple Approaches (Builds #39-45) ⚙️ IN PROGRESS
 - **Date:** 2025-11-08
 - **Config:** NDK 28c, testing different HarfBuzz patch approaches
-- **Result:** ⚙️ IN PROGRESS - Source code wrapper (corrected placement) testing (Build #44)
+- **Result:** ⚙️ IN PROGRESS - Source code wrapper (forward declarations) testing (Build #45)
 - **Problem:** Incompatible function pointer casts in HarfBuzz hb-ft.cc
 - **Error:** `cast from 'void (*)(FT_Face)' to 'FT_Generic_Finalizer' converts to incompatible function type [-Werror,-Wcast-function-type-strict]`
 - **Key Discovery #1:** `-Werror` elevates warnings to errors, pragma can't override
 - **Key Discovery #2:** hb-ft.cc is C++ (.cc extension), needs LOCAL_CPPFLAGS not LOCAL_CFLAGS
 - **Key Discovery #3:** Android.mk flags not picked up by build system despite being in file
-- **Key Discovery #4:** Wrapper functions must be declared AFTER the functions they call
+- **Key Discovery #4:** Wrapper functions must be declared AFTER the functions they call (or use forward declarations)
+- **Key Discovery #5:** Brace counting logic unreliable - use simpler insertion points
 - **Evidence:** Line numbers shifted (762→763→759→569) tracking each patch attempt
 - **Attempted Solutions:**
   - Build #39: `9492807` - Corrected path to SDL2 bootstrap directory (pragma)
@@ -392,7 +393,8 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
   - Build #41: `1b35ebd` - Android.mk LOCAL_CFLAGS approach (wrong - C only)
   - Build #42: `edd3e85` - Android.mk LOCAL_CPPFLAGS approach (flags not in compile command)
   - Build #43: `963ad85` - Source code wrappers (wrong placement - before functions)
-  - Build #44: `0093ad3` - Source code wrappers (correct placement - after functions) ⚙️ TESTING
+  - Build #44: `0093ad3` - Source code wrappers (brace counting - failed to insert)
+  - Build #45: `ee10a2f` - Source code wrappers (forward declarations) ⚙️ TESTING
 - **Build #39 Analysis:**
   - Wrong path: Used `self.get_build_dir()` which gave SDL2_ttf recipe dir
   - Correct path: `bootstrap_builds/sdl2/jni/SDL2_ttf/external/harfbuzz/`
@@ -421,13 +423,23 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
   - Error: "use of undeclared identifier 'hb_ft_face_finalize'" (line 569)
   - Error: "use of undeclared identifier '_release_blob'" (line 574)
   - **Conclusion:** C++ requires functions to be declared before use, need to insert wrappers AFTER original functions
-- **Build #44 Strategy:** Patch source code with wrappers inserted at correct location
+- **Build #44 Analysis:**
+  - Used brace counting to find end of `_release_blob` function
+  - Intended to insert wrappers after function closes
+  - **Critical failure:** Wrappers still not in compiled code
+  - Error: "use of undeclared identifier 'hb_ft_face_finalize_wrapper'" (line 759)
+  - String replacements happened (calling wrapper functions) but wrapper definitions never inserted
+  - **Conclusion:** Brace counting logic failed, wrappers not actually added to file
+- **Build #45 Strategy:** Use forward declarations (bulletproof approach)
   - File: `bootstrap_builds/sdl2/jni/SDL2_ttf/external/harfbuzz/src/hb-ft.cc`
-  - Find where `_release_blob` function ends (by counting braces)
-  - Insert wrapper functions immediately after the closing brace
-  - Fallback: If `_release_blob` not found, insert after `hb_ft_face_finalize`
-  - Add wrapper functions that match FT_Generic_Finalizer signature:
+  - Insert point: After last `#include` statement (simple, reliable)
+  - Use C++ forward declarations to declare functions before defining wrappers:
     ```cpp
+    /* Forward declarations - functions defined later in file */
+    static void hb_ft_face_finalize (FT_Face ft_face);
+    static void _release_blob (FT_Face ft_face);
+
+    /* Wrappers can now be defined anywhere */
     static void hb_ft_face_finalize_wrapper(void *object) {
       hb_ft_face_finalize(reinterpret_cast<FT_Face>(object));
     }
@@ -440,8 +452,9 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
   - This approach eliminates the warning entirely, no compiler flags needed
 - **Technical Details:**
   - Error lines: hb-ft.cc:759, 765, 1035 (original)
-  - Build #43 wrapper insertion: line 569 (too early)
-  - Build #44 wrapper insertion: after _release_blob function closes
+  - Build #43 wrapper insertion: line 569 (too early, before function defs)
+  - Build #44 wrapper insertion: failed (brace counting didn't work)
+  - Build #45 wrapper insertion: after last #include (simple, reliable)
   - Cast issue: `void (*)(FT_Face)` → `FT_Generic_Finalizer` (aka `void (*)(void *)`)
   - Compiler: clang++ (C++ compiler, not clang)
   - File extension: .cc (C++, not .c)
@@ -453,25 +466,27 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
   - Build #42: `edd3e85` - Add LOCAL_CPPFLAGS for HarfBuzz C++ compilation
   - Build #43: `963ad85` - Patch HarfBuzz source code with type-safe wrappers
   - Build #44: `0093ad3` - Correct wrapper function placement after definitions
+  - Build #45: `ee10a2f` - Use forward declarations for wrapper functions
 
 ## 📊 CURRENT STATUS (Updated 2025-11-08)
 
-**Total Attempts**: 34
-**Success Rate**: 3/34 (libffi ✅, SDL2 ✅, HarfBuzz ⚙️ testing)
+**Total Attempts**: 35
+**Success Rate**: 3/35 (libffi ✅, SDL2 ✅, HarfBuzz ⚙️ testing)
 **Root Cause #1**: LT_SYS_SYMBOL_USCORE macro obsolete in autoconf 2.71+ ✅ FIXED (Build #30)
 **Root Cause #2**: src/tramp.c uses open_temp_exec_file() not available on Android ✅ FIXED (Build #30)
 **Root Cause #3**: SDL2 ALooper_pollAll deprecated in NDK r28+ ✅ FIXED (Build #34)
-**Root Cause #4**: HarfBuzz function pointer casts too strict in NDK r28+ ⚙️ TESTING (Build #44 - source wrappers, corrected placement)
+**Root Cause #4**: HarfBuzz function pointer casts too strict in NDK r28+ ⚙️ TESTING (Build #45 - forward declarations)
 **Root Cause #5**: SDL2_ttf class name unknown (p4a version-dependent) ✅ FIXED (Build #38 - dynamic import)
 
-**Current Strategy**: Source code patch with type-safe wrapper functions, correct placement (Build #44)
-**Latest Commit**: `0093ad3` - Correct wrapper function placement after definitions
+**Current Strategy**: Source code patch with forward declarations + wrapper functions (Build #45)
+**Latest Commit**: `ee10a2f` - Use forward declarations for wrapper functions
 **Key Insights**:
 - Pragma directives fail when -Werror elevates warnings to errors
 - C++ files (.cc) need LOCAL_CPPFLAGS, not LOCAL_CFLAGS in Android.mk
 - Android.mk flags may not be picked up by build system (override issues)
 - Source code patches are the most reliable approach for compatibility fixes
-- C++ forward declaration: functions must be declared before they can be called!
+- C++ forward declarations allow functions to be used before they're fully defined
+- Simple insertion points (after #include) more reliable than complex brace counting!
 
 ## Build Configuration Summary
 
