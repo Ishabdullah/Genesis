@@ -1,17 +1,39 @@
 """
 Custom SDL2_ttf recipe that patches HarfBuzz for NDK r28+ compatibility
 
-Build #36: HarfBuzz function pointer cast fix (SIMPLIFIED PRAGMA APPROACH)
+Build #38: HarfBuzz function pointer cast fix (DYNAMIC IMPORT)
 - NDK r28+ has stricter -Wcast-function-type-strict warnings (treated as errors)
 - HarfBuzz's hb-ft.cc has incompatible function pointer casts
 - Solution: Add #pragma to disable the warning for this file (cleanest approach)
+- Fix: Use dynamic import to find correct base class
 """
 
 import os
-from pythonforandroid.recipes.sdl2_ttf import SDL2TtfRecipe
+import importlib
+
+# Dynamically import the SDL2_ttf recipe to avoid hardcoding class name
+try:
+    sdl2_ttf_module = importlib.import_module('pythonforandroid.recipes.sdl2_ttf')
+    # Try common naming patterns
+    for class_name in ['SDL2TtfRecipe', 'LibSDL2_ttfRecipe', 'Sdl2TtfRecipe', 'SDL2TTFRecipe']:
+        if hasattr(sdl2_ttf_module, class_name):
+            BaseRecipe = getattr(sdl2_ttf_module, class_name)
+            break
+    else:
+        # If none of the common names work, get the 'recipe' variable
+        if hasattr(sdl2_ttf_module, 'recipe'):
+            BaseRecipe = type(sdl2_ttf_module.recipe)
+        else:
+            # Last resort: use Recipe base class
+            from pythonforandroid.recipe import Recipe
+            BaseRecipe = Recipe
+except ImportError:
+    # Fallback to base Recipe if SDL2_ttf module doesn't exist
+    from pythonforandroid.recipe import Recipe
+    BaseRecipe = Recipe
 
 
-class SDL2TtfRecipePatched(SDL2TtfRecipe):
+class SDL2TtfRecipePatched(BaseRecipe):
     """
     Custom SDL2_ttf recipe that patches HarfBuzz for NDK r28+
 
@@ -20,6 +42,9 @@ class SDL2TtfRecipePatched(SDL2TtfRecipe):
     - Error: -Wcast-function-type-strict (cast from 'void (*)(FT_Face)' to 'void (*)(void *)')
     - Fix: Add #pragma clang diagnostic ignored at top of file
     """
+
+    # Ensure name is set if using base Recipe class
+    name = 'sdl2_ttf'
 
     def build_arch(self, arch):
         """
