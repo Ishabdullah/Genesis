@@ -375,20 +375,22 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
   - Build #37: `242b05d` - Fix class name (didn't work)
   - Build #38: `1a56dfb` - Dynamic import approach
 
-### Attempt 28-32: HarfBuzz Pragma vs -Werror (Builds #39-42) ⚙️ IN PROGRESS
+### Attempt 28-33: HarfBuzz Multiple Approaches (Builds #39-43) ⚙️ IN PROGRESS
 - **Date:** 2025-11-08
 - **Config:** NDK 28c, testing different HarfBuzz patch approaches
-- **Result:** ⚙️ IN PROGRESS - Android.mk LOCAL_CPPFLAGS approach testing (Build #42)
-- **Problem:** Pragma directives not working despite being applied
+- **Result:** ⚙️ IN PROGRESS - Source code wrapper function approach testing (Build #43)
+- **Problem:** Incompatible function pointer casts in HarfBuzz hb-ft.cc
 - **Error:** `cast from 'void (*)(FT_Face)' to 'FT_Generic_Finalizer' converts to incompatible function type [-Werror,-Wcast-function-type-strict]`
 - **Key Discovery #1:** `-Werror` elevates warnings to errors, pragma can't override
 - **Key Discovery #2:** hb-ft.cc is C++ (.cc extension), needs LOCAL_CPPFLAGS not LOCAL_CFLAGS
+- **Key Discovery #3:** Android.mk flags not picked up by build system despite being in file
 - **Evidence:** Line numbers shifted (762→763→759) tracking pragma removal and flag changes
 - **Attempted Solutions:**
-  - Build #39: `9492807` - Corrected path to SDL2 bootstrap directory
+  - Build #39: `9492807` - Corrected path to SDL2 bootstrap directory (pragma)
   - Build #40: `6f70ecb` - Pragma push/pop pattern (still failed)
   - Build #41: `1b35ebd` - Android.mk LOCAL_CFLAGS approach (wrong - C only)
-  - Build #42: `edd3e85` - Android.mk LOCAL_CPPFLAGS approach ⚙️ TESTING
+  - Build #42: `edd3e85` - Android.mk LOCAL_CPPFLAGS approach (flags not in compile command)
+  - Build #43: `963ad85` - Source code wrapper functions ⚙️ TESTING
 - **Build #39 Analysis:**
   - Wrong path: Used `self.get_build_dir()` which gave SDL2_ttf recipe dir
   - Correct path: `bootstrap_builds/sdl2/jni/SDL2_ttf/external/harfbuzz/`
@@ -403,38 +405,60 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
   - Flags visible in compile command but still failing
   - **Critical realization:** LOCAL_CFLAGS only applies to C files (.c)
   - hb-ft.cc is C++ (.cc extension), needs LOCAL_CPPFLAGS!
-- **Build #42 Strategy:** Modify Android.mk to add flags to both CFLAGS and CPPFLAGS
-  - File: `bootstrap_builds/sdl2/jni/SDL2_ttf/external/harfbuzz/Android.mk`
-  - Add: `LOCAL_CFLAGS += -Wno-error=cast-function-type-strict -Wno-cast-function-type-strict`
-  - Add: `LOCAL_CPPFLAGS += -Wno-error=cast-function-type-strict -Wno-cast-function-type-strict`
-  - Rationale: C++ files require CPPFLAGS, not just CFLAGS
-  - This is the correct NDK build system approach for C++ compilation
+- **Build #42 Analysis:**
+  - Used Android.mk with both LOCAL_CFLAGS and LOCAL_CPPFLAGS
+  - Patch applied successfully, verified in Android.mk file
+  - **Critical failure:** Flags NOT in compile command despite being in Android.mk
+  - Compile command shows: `-fPIC -Wformat -Werror=format-security` (our flags missing)
+  - Build system ignoring or overriding LOCAL_CPPFLAGS additions
+  - **Conclusion:** Android.mk approach fundamentally flawed for this build system
+- **Build #43 Strategy:** Patch source code directly with type-safe wrappers
+  - File: `bootstrap_builds/sdl2/jni/SDL2_ttf/external/harfbuzz/src/hb-ft.cc`
+  - Add wrapper functions that match FT_Generic_Finalizer signature:
+    ```cpp
+    static void hb_ft_face_finalize_wrapper(void *object) {
+      hb_ft_face_finalize(reinterpret_cast<FT_Face>(object));
+    }
+    static void _release_blob_wrapper(void *object) {
+      _release_blob(reinterpret_cast<FT_Face>(object));
+    }
+    ```
+  - Replace incompatible casts with wrapper calls
+  - Line 759: `!= (FT_Generic_Finalizer) hb_ft_face_finalize` → `!= hb_ft_face_finalize_wrapper`
+  - Line 765: `= (FT_Generic_Finalizer) hb_ft_face_finalize;` → `= hb_ft_face_finalize_wrapper;`
+  - Line 1035: `= (FT_Generic_Finalizer) _release_blob;` → `= _release_blob_wrapper;`
+  - Rationale: Source patch is most reliable - fixes actual type mismatch
+  - This approach eliminates the warning entirely, no compiler flags needed
 - **Technical Details:**
-  - Error lines: hb-ft.cc:759, 765, 1035 (Build #41-42)
-  - Cast: `void (*)(FT_Face)` → `FT_Generic_Finalizer` (aka `void (*)(void *)`)
+  - Error lines: hb-ft.cc:759, 765, 1035
+  - Cast issue: `void (*)(FT_Face)` → `FT_Generic_Finalizer` (aka `void (*)(void *)`)
   - Compiler: clang++ (C++ compiler, not clang)
   - File extension: .cc (C++, not .c)
+  - Solution: Type-safe wrapper bridge function
 - **Commits:**
   - Build #39: `9492807` - Correct HarfBuzz path in SDL2 bootstrap build
   - Build #40: `6f70ecb` - Use pragma push/pop to override -Werror for HarfBuzz
   - Build #41: `1b35ebd` - Modify Android.mk to suppress HarfBuzz cast warnings
   - Build #42: `edd3e85` - Add LOCAL_CPPFLAGS for HarfBuzz C++ compilation
+  - Build #43: `963ad85` - Patch HarfBuzz source code with type-safe wrappers
 
 ## 📊 CURRENT STATUS (Updated 2025-11-08)
 
-**Total Attempts**: 32
-**Success Rate**: 3/32 (libffi ✅, SDL2 ✅, HarfBuzz ⚙️ testing)
+**Total Attempts**: 33
+**Success Rate**: 3/33 (libffi ✅, SDL2 ✅, HarfBuzz ⚙️ testing)
 **Root Cause #1**: LT_SYS_SYMBOL_USCORE macro obsolete in autoconf 2.71+ ✅ FIXED (Build #30)
 **Root Cause #2**: src/tramp.c uses open_temp_exec_file() not available on Android ✅ FIXED (Build #30)
 **Root Cause #3**: SDL2 ALooper_pollAll deprecated in NDK r28+ ✅ FIXED (Build #34)
-**Root Cause #4**: HarfBuzz function pointer casts too strict in NDK r28+ ⚙️ TESTING (Build #42 - LOCAL_CPPFLAGS)
+**Root Cause #4**: HarfBuzz function pointer casts too strict in NDK r28+ ⚙️ TESTING (Build #43 - source wrappers)
 **Root Cause #5**: SDL2_ttf class name unknown (p4a version-dependent) ✅ FIXED (Build #38 - dynamic import)
 
-**Current Strategy**: Android.mk LOCAL_CPPFLAGS modification (Build #42)
-**Latest Commit**: `edd3e85` - Add LOCAL_CPPFLAGS for HarfBuzz C++ compilation
+**Current Strategy**: Source code patch with type-safe wrapper functions (Build #43)
+**Latest Commit**: `963ad85` - Patch HarfBuzz source code with type-safe wrappers
 **Key Insights**:
 - Pragma directives fail when -Werror elevates warnings to errors
-- C++ files (.cc) need LOCAL_CPPFLAGS, not LOCAL_CFLAGS in Android.mk!
+- C++ files (.cc) need LOCAL_CPPFLAGS, not LOCAL_CFLAGS in Android.mk
+- Android.mk flags may not be picked up by build system (override issues)
+- Source code patches are the most reliable approach for compatibility fixes!
 
 ## Build Configuration Summary
 
