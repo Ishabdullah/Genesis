@@ -1,6 +1,6 @@
 """
 Custom libffi recipe that patches configure.ac BEFORE autoreconf runs
-ONLY patches the CRITICAL blocker - LT_SYS_SYMBOL_USCORE
+ONLY patches the CRITICAL blocker - LT_SYS_SYMBOL_USCORE USAGE (not the macro call!)
 """
 
 import os
@@ -11,15 +11,11 @@ class LibffiRecipePatched(LibffiRecipe):
     """
     Custom libffi recipe that patches ONLY the critical blocker in configure.ac
 
-    CRITICAL FIX:
-    - LT_SYS_SYMBOL_USCORE (obsolete macro that blocks build)
+    Build #23 lesson: We patched the macro CALL, not the USAGE!
+    - Line 223 has: LT_SYS_SYMBOL_USCORE (macro call - WRONG to patch!)
+    - Need to find: if test "x$LT_SYS_SYMBOL_USCORE" = xyes; then (USAGE - patch this!)
 
-    WARNINGS IGNORED:
-    - AC_HEADER_STDC (warning only, doesn't block)
-    - AC_TRY_COMPILE (warning only, doesn't block)
-    - STDC_HEADERS (warning only, doesn't block)
-
-    Strategy: Patch the minimum needed to build successfully
+    The $ is critical - it means variable reference, not macro call.
     """
 
     # Use latest stable libffi
@@ -30,14 +26,14 @@ class LibffiRecipePatched(LibffiRecipe):
 
     def build_arch(self, arch):
         """
-        Patch ONLY LT_SYS_SYMBOL_USCORE in configure.ac BEFORE parent runs autoreconf
+        Patch ONLY the LT_SYS_SYMBOL_USCORE USAGE (with $) in configure.ac
         """
         # Get build directory where libffi source was extracted
         build_dir = self.get_build_dir(arch.arch)
         configure_ac_path = os.path.join(build_dir, 'configure.ac')
 
         print("=" * 70)
-        print("🔧 PATCHING LIBFFI - CRITICAL BLOCKER ONLY")
+        print("🔧 PATCHING LIBFFI - USAGE LINE ONLY (not macro call!)")
         print(f"📁 Build dir: {build_dir}")
         print("=" * 70)
 
@@ -60,14 +56,13 @@ class LibffiRecipePatched(LibffiRecipe):
         if 'PATCHED BY GENESIS' in content:
             print("✅ Already patched, skipping")
         else:
-            print("🔍 Searching for LT_SYS_SYMBOL_USCORE...")
+            print("🔍 Searching for LT_SYS_SYMBOL_USCORE USAGE (with $)...")
 
-            # Try multiple patterns to find the line
+            # MUST have $ to be a variable reference (usage), not macro call
             patterns_to_try = [
-                ('exact', 'if test "x$LT_SYS_SYMBOL_USCORE" = xyes; then'),
-                ('quoted', 'if test "x$LT_SYS_SYMBOL_USCORE" = "xyes"; then'),
-                ('spaced', 'if test "x$LT_SYS_SYMBOL_USCORE"  = xyes; then'),
-                ('any_containing', 'LT_SYS_SYMBOL_USCORE'),
+                ('exact_if_test', 'if test "x$LT_SYS_SYMBOL_USCORE" = xyes; then'),
+                ('quoted_if_test', 'if test "x$LT_SYS_SYMBOL_USCORE" = "xyes"; then'),
+                ('any_dollar_ref', '$LT_SYS_SYMBOL_USCORE'),  # At minimum, must have $
             ]
 
             found_pattern = None
@@ -76,34 +71,53 @@ class LibffiRecipePatched(LibffiRecipe):
             for pattern_name, pattern in patterns_to_try:
                 if pattern in content:
                     print(f"  ✅ Found {pattern_name} pattern: '{pattern}'")
-                    # Find line number
+                    # Find line number and show context
                     for i, line in enumerate(lines, 1):
                         if pattern in line:
                             found_line_num = i
                             found_pattern = pattern
                             print(f"  📍 At line {i}: {line.strip()}")
+
+                            # Show context (5 lines before and after)
+                            print(f"  📄 Context:")
+                            start = max(0, i - 6)  # -6 because enumerate starts at 1
+                            end = min(len(lines), i + 4)
+                            for j in range(start, end):
+                                marker = "→→→" if j == i - 1 else "   "
+                                print(f"    {marker} Line {j+1}: {lines[j]}")
                             break
                     break
 
             if not found_pattern:
-                print("  ❌ LT_SYS_SYMBOL_USCORE not found with any pattern!")
-                print("  🔎 Searching for lines containing 'SYMBOL' or 'USCORE':")
+                print("  ❌ LT_SYS_SYMBOL_USCORE USAGE not found!")
+                print("  🔎 Searching for ALL lines containing 'LT_SYS_SYMBOL_USCORE':")
                 for i, line in enumerate(lines, 1):
-                    if 'SYMBOL' in line or 'USCORE' in line:
-                        print(f"     Line {i}: {line.strip()}")
-                print("  ⚠️  Cannot patch - proceeding anyway (might fail)")
+                    if 'LT_SYS_SYMBOL_USCORE' in line:
+                        has_dollar = '$' in line
+                        symbol = "💲" if has_dollar else "🔤"
+                        print(f"    {symbol} Line {i}: {line.strip()}")
+                print("  📝 Legend: 💲 = has $ (usage), 🔤 = no $ (macro call)")
+                print("  ⚠️  Cannot patch - proceeding anyway (will likely fail)")
             else:
                 # PATCH IT!
                 print(f"  🔧 Patching line {found_line_num}...")
 
-                # Replace the found pattern with safe default
-                patched_content = content.replace(
-                    found_pattern,
-                    '# PATCHED BY GENESIS: LT_SYS_SYMBOL_USCORE is obsolete in modern libtool\n'
-                    '# Original: ' + found_pattern + '\n'
-                    '# Defaulting to "no" (modern systems don\'t use underscore prefix)\n'
-                    'if test "xno" = xyes; then'
-                )
+                # For safety, only replace if it's an if-test pattern
+                if 'if test' in found_pattern:
+                    # Replace the entire if-test line
+                    patched_content = content.replace(
+                        found_pattern,
+                        '# PATCHED BY GENESIS: LT_SYS_SYMBOL_USCORE is obsolete\n'
+                        '# Original: ' + found_pattern + '\n'
+                        '# Fixed: Default to "no" (modern systems have no underscore prefix)\n'
+                        'if test "xno" = xyes; then'
+                    )
+                else:
+                    # Just comment out the line if it's not an if-test
+                    patched_content = content.replace(
+                        found_pattern,
+                        '# PATCHED BY GENESIS: ' + found_pattern
+                    )
 
                 # Verify patch worked
                 if 'PATCHED BY GENESIS' in patched_content:
@@ -111,6 +125,7 @@ class LibffiRecipePatched(LibffiRecipe):
                     with open(configure_ac_path, 'w') as f:
                         f.write(patched_content)
                     print("  ✅ Patch applied successfully!")
+                    print(f"  📝 Replaced '{found_pattern[:50]}...'")
                 else:
                     print("  ❌ Patch failed to apply!")
 
