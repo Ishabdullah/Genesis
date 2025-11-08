@@ -50,15 +50,22 @@ class SDL2TtfRecipePatched(BaseRecipe):
         """
         Apply HarfBuzz patch BEFORE compilation
         """
-        # Get build directory where SDL2_ttf source was extracted
-        build_dir = self.get_build_dir(arch.arch)
-        hb_ft_path = os.path.join(build_dir, 'external', 'harfbuzz', 'src', 'hb-ft.cc')
+        # SDL2_ttf is built as part of SDL2 bootstrap
+        # The actual source is in the SDL2 bootstrap build directory
+        # Get the SDL2 bootstrap build directory
+        from pythonforandroid.toolchain import current_directory
+        import glob
+
+        # Find SDL2_ttf source in bootstrap builds
+        bootstrap_dir = os.path.join(self.ctx.build_dir, 'bootstrap_builds', 'sdl2')
+        hb_ft_path = os.path.join(bootstrap_dir, 'jni', 'SDL2_ttf', 'external', 'harfbuzz', 'src', 'hb-ft.cc')
 
         print("=" * 70)
-        print("🔧 PATCHING SDL2_TTF/HARFBUZZ - Build #36 (NDK r28+ compatibility)")
+        print("🔧 PATCHING SDL2_TTF/HARFBUZZ - Build #39 (NDK r28+ compatibility)")
         print("  Fix: Disable -Wcast-function-type-strict in hb-ft.cc")
         print("  Method: #pragma clang diagnostic (simple & reliable)")
-        print(f"📁 Build dir: {build_dir}")
+        print(f"📁 Bootstrap dir: {bootstrap_dir}")
+        print(f"📁 HarfBuzz file: {hb_ft_path}")
         print("=" * 70)
 
         patch_applied = False
