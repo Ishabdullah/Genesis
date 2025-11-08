@@ -375,19 +375,53 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
   - Build #37: `242b05d` - Fix class name (didn't work)
   - Build #38: `1a56dfb` - Dynamic import approach
 
+### Attempt 28-31: HarfBuzz Pragma vs -Werror (Builds #39-41) ⚙️ IN PROGRESS
+- **Date:** 2025-11-08
+- **Config:** NDK 28c, testing different HarfBuzz patch approaches
+- **Result:** ⚙️ IN PROGRESS - Android.mk approach testing (Build #41)
+- **Problem:** Pragma directives not working despite being applied
+- **Error:** `cast from 'void (*)(FT_Face)' to 'FT_Generic_Finalizer' converts to incompatible function type [-Werror,-Wcast-function-type-strict]`
+- **Key Discovery:** `-Werror` elevates warnings to errors, pragma can't override
+- **Evidence:** Line numbers shifted (762→763) proving pragma was added but ineffective
+- **Attempted Solutions:**
+  - Build #39: `9492807` - Corrected path to SDL2 bootstrap directory
+  - Build #40: `6f70ecb` - Pragma push/pop pattern (still failed)
+  - Build #41: `1b35ebd` - Android.mk compiler flag approach ⚙️ TESTING
+- **Build #39 Analysis:**
+  - Wrong path: Used `self.get_build_dir()` which gave SDL2_ttf recipe dir
+  - Correct path: `bootstrap_builds/sdl2/jni/SDL2_ttf/external/harfbuzz/`
+  - Pragma applied but still got errors at lines 762, 768, 1038
+- **Build #40 Analysis:**
+  - Used pragma push/pop pattern (recommended approach)
+  - Errors now at lines 763, 769, 1039 (shifted by +1)
+  - This proves pragma was added but can't suppress -Werror elevated warnings
+- **Build #41 Strategy:** Modify Android.mk makefile
+  - File: `bootstrap_builds/sdl2/jni/SDL2_ttf/external/harfbuzz/Android.mk`
+  - Add: `LOCAL_CFLAGS += -Wno-error=cast-function-type-strict -Wno-cast-function-type-strict`
+  - Rationale: Downgrade warning before -Werror can elevate it
+  - This is the NDK-native way to handle compiler warnings
+- **Technical Details:**
+  - Error lines: hb-ft.cc:763, 769, 1039
+  - Cast: `void (*)(FT_Face)` → `FT_Generic_Finalizer` (aka `void (*)(void *)`)
+  - Compiler: clang with `-Werror=format-security`
+- **Commits:**
+  - Build #39: `9492807` - Correct HarfBuzz path in SDL2 bootstrap build
+  - Build #40: `6f70ecb` - Use pragma push/pop to override -Werror for HarfBuzz
+  - Build #41: `1b35ebd` - Modify Android.mk to suppress HarfBuzz cast warnings
+
 ## 📊 CURRENT STATUS (Updated 2025-11-08)
 
-**Total Attempts**: 27
-**Success Rate**: 3/27 (libffi ✅, SDL2 ✅, HarfBuzz ✅, SDL2_ttf ⚙️ testing)
+**Total Attempts**: 31
+**Success Rate**: 3/31 (libffi ✅, SDL2 ✅, HarfBuzz ⚙️ testing)
 **Root Cause #1**: LT_SYS_SYMBOL_USCORE macro obsolete in autoconf 2.71+ ✅ FIXED (Build #30)
 **Root Cause #2**: src/tramp.c uses open_temp_exec_file() not available on Android ✅ FIXED (Build #30)
 **Root Cause #3**: SDL2 ALooper_pollAll deprecated in NDK r28+ ✅ FIXED (Build #34)
-**Root Cause #4**: HarfBuzz function pointer casts too strict in NDK r28+ ✅ FIXED (Build #36)
-**Root Cause #5**: SDL2_ttf class name unknown (p4a version-dependent) ⚙️ IN PROGRESS (Build #38)
+**Root Cause #4**: HarfBuzz function pointer casts too strict in NDK r28+ ⚙️ TESTING (Build #41 - Android.mk approach)
+**Root Cause #5**: SDL2_ttf class name unknown (p4a version-dependent) ✅ FIXED (Build #38 - dynamic import)
 
-**Current Strategy**: Dynamic import to handle p4a version differences
-**Latest Commit**: `1a56dfb` - Dynamic import for SDL2_ttf base class
-**Key Insight**: NDK r28+ requires multiple compatibility patches across the dependency chain!
+**Current Strategy**: Android.mk compiler flag modification (Build #41)
+**Latest Commit**: `1b35ebd` - Modify Android.mk to suppress HarfBuzz cast warnings
+**Key Insight**: Pragma directives fail when -Werror elevates warnings to errors!
 
 ## Build Configuration Summary
 
