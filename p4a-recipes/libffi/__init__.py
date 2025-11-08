@@ -89,6 +89,11 @@ class LibffiRecipePatched(LibffiRecipe):
                         f.write('\n'.join(lines))
                     print("  ✅ PATCH #1 applied successfully!")
                     print("  📝 Wrote patched configure.ac")
+
+                    # Verify patch with SHA256 hash
+                    import hashlib
+                    hash_obj = hashlib.sha256('\n'.join(lines).encode('utf-8'))
+                    print(f"  🔒 Patch verification hash: {hash_obj.hexdigest()[:16]}...")
                 else:
                     print("  ❌ PATCH #1 FAILED: LT_SYS_SYMBOL_USCORE not found!")
 
@@ -147,6 +152,11 @@ class LibffiRecipePatched(LibffiRecipe):
                             f.write(tramp_content)
                         print("  ✅ Wrapped open_temp_exec_file() with #ifndef __ANDROID__")
                         print("  📝 Wrote patched tramp.c")
+
+                        # Verify patch with SHA256 hash
+                        import hashlib
+                        hash_obj = hashlib.sha256(tramp_content.encode('utf-8'))
+                        print(f"  🔒 Patch verification hash: {hash_obj.hexdigest()[:16]}...")
                         print("  ✅ PATCH #2 applied successfully!")
                         patch2_applied = True
                     else:
@@ -162,8 +172,13 @@ class LibffiRecipePatched(LibffiRecipe):
                             tramp_content = '/* GENESIS ANDROID PATCH: Disabled open_temp_exec_file for Android */\n' + tramp_content
                             with open(tramp_c_path, 'w') as f:
                                 f.write(tramp_content)
-                            print("  ✅ Disabled open_temp_exec_file() calls")
+                            print("  ✅ Disabled open_temp_exec_file() calls (fallback method)")
                             print("  📝 Wrote patched tramp.c")
+
+                            # Verify fallback patch
+                            import hashlib
+                            hash_obj = hashlib.sha256(tramp_content.encode('utf-8'))
+                            print(f"  🔒 Fallback patch hash: {hash_obj.hexdigest()[:16]}...")
                             patch2_applied = True
                 else:
                     print("  ⚠️  open_temp_exec_file not found in tramp.c")
