@@ -1,6 +1,6 @@
 """
 Custom libffi recipe that patches configure.ac BEFORE autoreconf runs
-ONLY patches the CRITICAL blocker - LT_SYS_SYMBOL_USCORE USAGE (not the macro call!)
+Patches the macro CALL (line 223) - there is NO usage line!
 """
 
 import os
@@ -9,13 +9,13 @@ from pythonforandroid.recipes.libffi import LibffiRecipe
 
 class LibffiRecipePatched(LibffiRecipe):
     """
-    Custom libffi recipe that patches ONLY the critical blocker in configure.ac
+    Custom libffi recipe that patches the LT_SYS_SYMBOL_USCORE macro CALL
 
-    Build #23 lesson: We patched the macro CALL, not the USAGE!
-    - Line 223 has: LT_SYS_SYMBOL_USCORE (macro call - WRONG to patch!)
-    - Need to find: if test "x$LT_SYS_SYMBOL_USCORE" = xyes; then (USAGE - patch this!)
-
-    The $ is critical - it means variable reference, not macro call.
+    Build #24 discovery: There is ONLY line 223 with LT_SYS_SYMBOL_USCORE!
+    - No $ usage line exists in libffi 3.4.4
+    - Just the macro call: LT_SYS_SYMBOL_USCORE
+    - This macro is undefined in modern autoconf
+    - Solution: Comment it out entirely
     """
 
     # Use latest stable libffi
@@ -26,14 +26,14 @@ class LibffiRecipePatched(LibffiRecipe):
 
     def build_arch(self, arch):
         """
-        Patch ONLY the LT_SYS_SYMBOL_USCORE USAGE (with $) in configure.ac
+        Comment out the LT_SYS_SYMBOL_USCORE macro call at line 223
         """
         # Get build directory where libffi source was extracted
         build_dir = self.get_build_dir(arch.arch)
         configure_ac_path = os.path.join(build_dir, 'configure.ac')
 
         print("=" * 70)
-        print("🔧 PATCHING LIBFFI - USAGE LINE ONLY (not macro call!)")
+        print("🔧 PATCHING LIBFFI - Comment out macro CALL (line 223)")
         print(f"📁 Build dir: {build_dir}")
         print("=" * 70)
 
@@ -56,78 +56,42 @@ class LibffiRecipePatched(LibffiRecipe):
         if 'PATCHED BY GENESIS' in content:
             print("✅ Already patched, skipping")
         else:
-            print("🔍 Searching for LT_SYS_SYMBOL_USCORE USAGE (with $)...")
+            print("🔍 Searching for LT_SYS_SYMBOL_USCORE macro call...")
 
-            # MUST have $ to be a variable reference (usage), not macro call
-            patterns_to_try = [
-                ('exact_if_test', 'if test "x$LT_SYS_SYMBOL_USCORE" = xyes; then'),
-                ('quoted_if_test', 'if test "x$LT_SYS_SYMBOL_USCORE" = "xyes"; then'),
-                ('any_dollar_ref', '$LT_SYS_SYMBOL_USCORE'),  # At minimum, must have $
-            ]
+            patched = False
+            for i, line in enumerate(lines):
+                # Look for LT_SYS_SYMBOL_USCORE WITHOUT $ (macro call, not usage)
+                if 'LT_SYS_SYMBOL_USCORE' in line and '$' not in line:
+                    line_num = i + 1
+                    print(f"  ✅ Found macro CALL at line {line_num}: {line.strip()}")
 
-            found_pattern = None
-            found_line_num = None
+                    # Show context
+                    print(f"  📄 Context (5 lines before and after):")
+                    start = max(0, i - 5)
+                    end = min(len(lines), i + 6)
+                    for j in range(start, end):
+                        marker = "→→→" if j == i else "   "
+                        print(f"    {marker} Line {j+1}: {lines[j]}")
 
-            for pattern_name, pattern in patterns_to_try:
-                if pattern in content:
-                    print(f"  ✅ Found {pattern_name} pattern: '{pattern}'")
-                    # Find line number and show context
-                    for i, line in enumerate(lines, 1):
-                        if pattern in line:
-                            found_line_num = i
-                            found_pattern = pattern
-                            print(f"  📍 At line {i}: {line.strip()}")
+                    # Comment it out
+                    lines[i] = ('# PATCHED BY GENESIS: LT_SYS_SYMBOL_USCORE is obsolete in modern libtool\n'
+                                '# This macro is undefined in autoconf 2.71+, commenting out\n'
+                                '# Original line 223: ' + line)
 
-                            # Show context (5 lines before and after)
-                            print(f"  📄 Context:")
-                            start = max(0, i - 6)  # -6 because enumerate starts at 1
-                            end = min(len(lines), i + 4)
-                            for j in range(start, end):
-                                marker = "→→→" if j == i - 1 else "   "
-                                print(f"    {marker} Line {j+1}: {lines[j]}")
-                            break
+                    print(f"  🔧 Commented out line {line_num}")
+                    print(f"  📝 Original: {line.strip()}")
+                    print(f"  📝 Replaced with comment")
+                    patched = True
                     break
 
-            if not found_pattern:
-                print("  ❌ LT_SYS_SYMBOL_USCORE USAGE not found!")
-                print("  🔎 Searching for ALL lines containing 'LT_SYS_SYMBOL_USCORE':")
-                for i, line in enumerate(lines, 1):
-                    if 'LT_SYS_SYMBOL_USCORE' in line:
-                        has_dollar = '$' in line
-                        symbol = "💲" if has_dollar else "🔤"
-                        print(f"    {symbol} Line {i}: {line.strip()}")
-                print("  📝 Legend: 💲 = has $ (usage), 🔤 = no $ (macro call)")
-                print("  ⚠️  Cannot patch - proceeding anyway (will likely fail)")
+            if not patched:
+                print("  ❌ LT_SYS_SYMBOL_USCORE not found!")
+                print("  ⚠️  This is unexpected - build will likely fail")
             else:
-                # PATCH IT!
-                print(f"  🔧 Patching line {found_line_num}...")
-
-                # For safety, only replace if it's an if-test pattern
-                if 'if test' in found_pattern:
-                    # Replace the entire if-test line
-                    patched_content = content.replace(
-                        found_pattern,
-                        '# PATCHED BY GENESIS: LT_SYS_SYMBOL_USCORE is obsolete\n'
-                        '# Original: ' + found_pattern + '\n'
-                        '# Fixed: Default to "no" (modern systems have no underscore prefix)\n'
-                        'if test "xno" = xyes; then'
-                    )
-                else:
-                    # Just comment out the line if it's not an if-test
-                    patched_content = content.replace(
-                        found_pattern,
-                        '# PATCHED BY GENESIS: ' + found_pattern
-                    )
-
-                # Verify patch worked
-                if 'PATCHED BY GENESIS' in patched_content:
-                    # Write patched file
-                    with open(configure_ac_path, 'w') as f:
-                        f.write(patched_content)
-                    print("  ✅ Patch applied successfully!")
-                    print(f"  📝 Replaced '{found_pattern[:50]}...'")
-                else:
-                    print("  ❌ Patch failed to apply!")
+                # Write patched file
+                with open(configure_ac_path, 'w') as f:
+                    f.write('\n'.join(lines))
+                print("  ✅ Patch applied successfully!")
 
         print("=" * 70)
         print("📞 Calling parent build_arch (will run autoreconf on patched file)")
