@@ -100,6 +100,38 @@ jobs:
         run: |
           yes | sdkmanager --licenses || true
 
+      - name: Verify NDK r28+ patches are in place
+        run: |
+          echo "🔍 Verifying custom recipes for NDK r28+ compatibility..."
+
+          # Check libffi recipe
+          if [ -f "p4a-recipes/libffi/__init__.py" ]; then
+            echo "✅ libffi recipe found"
+          else
+            echo "⚠️  libffi recipe missing!"
+          fi
+
+          # Check SDL2 recipe
+          if [ -f "p4a-recipes/sdl2/__init__.py" ]; then
+            grep -q "ALooper_pollOnce" p4a-recipes/sdl2/__init__.py && \
+              echo "✅ SDL2 ALooper patch verified" || \
+              echo "⚠️  SDL2 patch may be missing!"
+          else
+            echo "⚠️  SDL2 recipe missing!"
+          fi
+
+          # Check SDL2_ttf recipe
+          if [ -f "p4a-recipes/sdl2_ttf/__init__.py" ]; then
+            grep -q "SDL2TtfRecipe" p4a-recipes/sdl2_ttf/__init__.py && \
+              echo "✅ SDL2_ttf recipe using correct class name" || \
+              echo "⚠️  SDL2_ttf may have wrong import!"
+          else
+            echo "⚠️  SDL2_ttf recipe missing!"
+          fi
+
+          echo ""
+          echo "✅ Pre-build verification complete"
+
       - name: Build APK with Buildozer
         run: |
           # Export aclocal path to help libffi find autoconf-archive macros
