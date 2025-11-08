@@ -1,13 +1,13 @@
 """
 Custom SDL2_ttf recipe that patches HarfBuzz for NDK r28+ compatibility
 
-Build #44: HarfBuzz function pointer cast fix (SOURCE CODE PATCH - FIXED PLACEMENT)
+Build #45: HarfBuzz function pointer cast fix (FORWARD DECLARATIONS)
 - NDK r28+ has stricter -Wcast-function-type-strict warnings (treated as errors)
 - HarfBuzz's hb-ft.cc has incompatible function pointer casts (C++ file)
 - Pragma approach (Builds #39-40) failed because -Werror elevates warnings to errors
 - Android.mk LOCAL_CPPFLAGS approach (Builds #41-42) failed - flags not in compile command
-- Build #43 failed: Wrapper functions inserted BEFORE the functions they call
-- Solution: Insert wrapper functions AFTER the original function definitions
+- Builds #43-44 failed: Brace counting logic didn't insert wrappers correctly
+- Solution: Use forward declarations, insert early in file, avoids complex logic
 - This is the most reliable approach - fixes the actual type mismatch
 """
 
@@ -64,10 +64,10 @@ class SDL2TtfRecipePatched(BaseRecipe):
         hb_ft_path = os.path.join(bootstrap_dir, 'jni', 'SDL2_ttf', 'external', 'harfbuzz', 'src', 'hb-ft.cc')
 
         print("=" * 70)
-        print("🔧 PATCHING SDL2_TTF/HARFBUZZ - Build #44 (NDK r28+ compatibility)")
-        print("  Fix: Patch hb-ft.cc to use type-safe wrapper functions")
-        print("  Method: Insert wrappers AFTER function definitions (not before)")
-        print("  Why: Build #43 inserted wrappers before functions were defined")
+        print("🔧 PATCHING SDL2_TTF/HARFBUZZ - Build #45 (NDK r28+ compatibility)")
+        print("  Fix: Patch hb-ft.cc with forward declarations + wrappers")
+        print("  Method: Insert after includes using forward declarations")
+        print("  Why: Builds #43-44 brace counting failed to insert wrappers")
         print(f"📁 Bootstrap dir: {bootstrap_dir}")
         print(f"📁 HarfBuzz file: {hb_ft_path}")
         print("=" * 70)
@@ -88,12 +88,18 @@ class SDL2TtfRecipePatched(BaseRecipe):
             else:
                 print("\n🔍 Adding type-safe wrapper functions...")
 
-                # Strategy: Add wrapper functions that properly bridge the type mismatch
+                # Strategy: Use forward declarations so wrappers can be defined early
                 # The issue is: void (*)(FT_Face) vs void (*)(void *)
-                # Solution: Create wrapper that takes void* and casts to FT_Face
+                # Solution: Forward declare the functions, then define wrappers early in file
 
+                # Forward declarations + wrappers that can go anywhere
                 wrapper_code = '''
 /* GENESIS ANDROID PATCH: Type-safe wrappers for FT_Generic_Finalizer casts (NDK r28+) */
+
+/* Forward declarations - these functions are defined later in this file */
+static void hb_ft_face_finalize (FT_Face ft_face);
+static void _release_blob (FT_Face ft_face);
+
 /* Wrapper for hb_ft_face_finalize to match FT_Generic_Finalizer signature */
 static void hb_ft_face_finalize_wrapper(void *object) {
   hb_ft_face_finalize(reinterpret_cast<FT_Face>(object));
@@ -107,60 +113,21 @@ static void _release_blob_wrapper(void *object) {
 
 '''
 
-                # Find where _release_blob function ends
-                # Look for the closing brace of _release_blob function
-                # Then insert our wrappers right after it
+                # Simple approach: Insert after the last #include statement
                 lines = content.split('\n')
                 patched_lines = []
-                inserted = False
-                in_release_blob = False
-                brace_count = 0
+                last_include_idx = -1
 
+                # Find the last #include
+                for i, line in enumerate(lines):
+                    if '#include' in line:
+                        last_include_idx = i
+
+                # Insert wrapper code after last include
                 for i, line in enumerate(lines):
                     patched_lines.append(line)
-
-                    # Detect start of _release_blob function
-                    if not inserted and '_release_blob' in line and '(' in line and '{' not in line:
-                        in_release_blob = True
-                        brace_count = 0
-
-                    # Count braces when inside _release_blob
-                    if in_release_blob:
-                        brace_count += line.count('{')
-                        brace_count -= line.count('}')
-
-                        # When we close all braces, the function has ended
-                        if brace_count == 0 and '}' in line:
-                            # Insert wrappers right after _release_blob ends
-                            patched_lines.append(wrapper_code)
-                            inserted = True
-                            in_release_blob = False
-
-                # If we didn't find _release_blob, insert after hb_ft_face_finalize
-                if not inserted:
-                    patched_lines = []
-                    in_finalize = False
-                    brace_count = 0
-
-                    for i, line in enumerate(lines):
-                        patched_lines.append(line)
-
-                        # Detect start of hb_ft_face_finalize function
-                        if not inserted and 'hb_ft_face_finalize' in line and '(' in line:
-                            in_finalize = True
-                            brace_count = 0
-
-                        # Count braces when inside function
-                        if in_finalize:
-                            brace_count += line.count('{')
-                            brace_count -= line.count('}')
-
-                            # When we close all braces, the function has ended
-                            if brace_count == 0 and '}' in line:
-                                # Insert wrappers right after function ends
-                                patched_lines.append(wrapper_code)
-                                inserted = True
-                                in_finalize = False
+                    if i == last_include_idx:
+                        patched_lines.append(wrapper_code)
 
                 patched_content = '\n'.join(patched_lines)
 
