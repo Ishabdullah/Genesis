@@ -221,6 +221,69 @@ Build on a local machine with:
 - **BeeWare Briefcase**: Free, modern Python mobile framework
 - **Termux**: Build directly on Android device
 
+### Attempt 13-19: Various Trampoline Fixes (Builds #22-27)
+- **Date:** 2025-11-08
+- **Config:** NDK 28c, custom recipe with configure.ac patching
+- **Results:** All ❌ FAILED - Different strategies for trampoline issues
+- **What worked:** Patch #1 (LT_SYS_SYMBOL_USCORE) fixed autoreconf
+- **New problem:** src/tramp.c compilation errors on Android
+- **Error:** `call to undeclared function 'open_temp_exec_file'`
+- **Attempts included:**
+  - Build #22-24: Configure flags and environment variables
+  - Build #25: Comment out line 223 only
+  - Build #26: Try to disable via configure_args
+  - Build #27: Insert shell variables into configure.ac (wrong approach)
+- **Key learning:** Shell variables don't work in configure.ac - need M4 macros or Makefile.am changes
+- **Documentation:** Created BUILD_22_ANALYSIS.md through BUILD_27_ANALYSIS.md
+
+### Attempt 20: Patch Makefile.am to Exclude tramp.c (Build #28) ⚠️
+- **Date:** 2025-11-08
+- **Config:** NDK 28c, custom recipe patches both configure.ac AND Makefile.am
+- **Result:** ❌ FAILED - Makefile.am syntax errors
+- **Approach:** Direct exclusion of src/tramp.c from Makefile.am
+  - Patch #1: Comment out LT_SYS_SYMBOL_USCORE (line 223)
+  - Patch #2: Comment out lines containing tramp.c in Makefile.am
+  - Goal: Remove tramp.c from build entirely
+- **Why it failed:**
+  - Commented out entire lines in Makefile.am
+  - Broke multi-line variable assignments with backslash continuations
+  - Created automake errors:
+    - `Makefile.am:43: error: comment following trailing backslash`
+    - `Makefile.am:46: error: libffi_la_SOURCES must be set with '=' before using '+=`
+  - autoreconf failed during automake phase
+- **Lesson learned:**
+  - Commenting out lines breaks Makefile.am syntax
+  - Need to remove references without breaking variable assignments
+  - Multi-line assignments are fragile
+
+### Attempt 21: Regex-Based Makefile.am Patching (Build #29) 🔄
+- **Date:** 2025-11-08
+- **Config:** NDK 28c, custom recipe with improved Makefile.am patching
+- **Status:** 🔄 IN PROGRESS
+- **Approach:** Use regex to remove tramp.c inline without breaking syntax
+  - Patch #1: Comment out LT_SYS_SYMBOL_USCORE (line 223) ✅
+  - Patch #2: Regex replacement for tramp.c removal ✨ NEW
+    - Pattern 1: Remove `src/tramp.c` from inline SOURCES lists
+    - Pattern 2: Remove continuation lines that only contain `src/tramp.c \`
+    - Pattern 3: Remove `tramp.lo` object file references
+  - Preserves Makefile.am structure and syntax
+- **Why this should work:**
+  - Removes tramp.c references without commenting lines
+  - Preserves backslash continuations
+  - Handles both inline and multi-line cases
+  - Tested patterns based on libffi 3.4.4 Makefile.am
+- **Implementation:**
+  ```python
+  makefile_content = re.sub(r'\s+src/tramp\.c\s*', ' ', makefile_content)
+  makefile_content = re.sub(r'^\s*src/tramp\.c\s*\\?\s*$', '', makefile_content, flags=re.MULTILINE)
+  makefile_content = re.sub(r'\s+tramp\.lo\s*', ' ', makefile_content)
+  ```
+- **Expected result:**
+  - autoreconf: ✅ (Patch #1 working)
+  - automake: ✅ (Patch #2 preserves syntax)
+  - configure: ✅ (generated successfully)
+  - make: ✅ (no tramp.c to compile)
+
 ## 📝 RECOMMENDATIONS FOR THIS PROJECT
 
 Given the Genesis app's complexity and need for Android APIs, I recommend:
@@ -231,12 +294,12 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
 
 ## 📊 CURRENT STATUS
 
-**Total Attempts**: 12
-**Success Rate**: 0/11 (Attempt #12 in progress - Build #21)
-**Root Cause**: p4a's LibffiRecipe ALWAYS runs autoreconf (hardcoded), even with pre-generated configure
-**Blocker**: LT_SYS_SYMBOL_USCORE macro obsolete in autoconf 2.71+ (Ubuntu 24.04)
-**Current Strategy**: Patch configure.ac in custom recipe BEFORE parent's autoreconf call
-**Build #20 Analysis**: Created comprehensive BUILD_20_ANALYSIS.md with systematic error review
+**Total Attempts**: 21
+**Success Rate**: 0/20 (Attempt #21 in progress - Build #29)
+**Root Cause #1**: LT_SYS_SYMBOL_USCORE macro obsolete in autoconf 2.71+ (Ubuntu 24.04) ✅ FIXED
+**Root Cause #2**: src/tramp.c uses open_temp_exec_file() not available on Android ⚙️ IN PROGRESS
+**Current Strategy**: Regex-based Makefile.am patching to exclude tramp.c without breaking syntax
+**Latest Analysis**: BUILD_27_ANALYSIS.md identified Makefile.am as best fix option
 
 ## Build Configuration Summary
 
