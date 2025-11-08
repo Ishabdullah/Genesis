@@ -1,12 +1,13 @@
 """
 Custom SDL2_ttf recipe that patches HarfBuzz for NDK r28+ compatibility
 
-Build #41: HarfBuzz function pointer cast fix (ANDROID.MK APPROACH)
+Build #42: HarfBuzz function pointer cast fix (ANDROID.MK - LOCAL_CPPFLAGS)
 - NDK r28+ has stricter -Wcast-function-type-strict warnings (treated as errors)
-- HarfBuzz's hb-ft.cc has incompatible function pointer casts
+- HarfBuzz's hb-ft.cc has incompatible function pointer casts (C++ file)
 - Pragma approach failed because -Werror elevates warnings to errors
-- Solution: Modify Android.mk to add -Wno-error=cast-function-type-strict flag
-- This downgrades the specific warning before -Werror can elevate it
+- Build #41 failed: Used LOCAL_CFLAGS but hb-ft.cc is C++ (.cc extension)
+- Solution: Modify Android.mk to add flags to both LOCAL_CFLAGS AND LOCAL_CPPFLAGS
+- C++ files (.cc) need LOCAL_CPPFLAGS, not just LOCAL_CFLAGS
 """
 
 import os
@@ -41,8 +42,8 @@ class SDL2TtfRecipePatched(BaseRecipe):
     PATCH: Disable strict function pointer cast warnings via Android.mk
     - File: external/harfbuzz/Android.mk
     - Error: -Wcast-function-type-strict (cast from 'void (*)(FT_Face)' to 'void (*)(void *)')
-    - Fix: Add -Wno-error=cast-function-type-strict to LOCAL_CFLAGS
-    - Why: Pragma directives don't work when -Werror elevates warnings to errors
+    - Fix: Add -Wno-error=cast-function-type-strict to LOCAL_CFLAGS AND LOCAL_CPPFLAGS
+    - Why: hb-ft.cc is C++ file (.cc), needs CPPFLAGS not just CFLAGS
     """
 
     # Ensure name is set if using base Recipe class
@@ -62,10 +63,10 @@ class SDL2TtfRecipePatched(BaseRecipe):
         harfbuzz_mk_path = os.path.join(bootstrap_dir, 'jni', 'SDL2_ttf', 'external', 'harfbuzz', 'Android.mk')
 
         print("=" * 70)
-        print("🔧 PATCHING SDL2_TTF/HARFBUZZ - Build #41 (NDK r28+ compatibility)")
+        print("🔧 PATCHING SDL2_TTF/HARFBUZZ - Build #42 (NDK r28+ compatibility)")
         print("  Fix: Add -Wno-error=cast-function-type-strict to Android.mk")
-        print("  Method: Modify LOCAL_CFLAGS in Android.mk makefile")
-        print("  Why: Pragma approach failed - -Werror elevates warnings to errors")
+        print("  Method: Modify LOCAL_CFLAGS and LOCAL_CPPFLAGS in Android.mk")
+        print("  Why: hb-ft.cc is C++, needs CPPFLAGS not just CFLAGS")
         print(f"📁 Bootstrap dir: {bootstrap_dir}")
         print(f"📁 Android.mk: {harfbuzz_mk_path}")
         print("=" * 70)
@@ -84,43 +85,47 @@ class SDL2TtfRecipePatched(BaseRecipe):
                 print("✅ Android.mk already patched, skipping")
                 patch_applied = True
             else:
-                print("\n🔍 Adding -Wno-error flag to LOCAL_CFLAGS...")
+                print("\n🔍 Adding -Wno-error flag to LOCAL_CFLAGS and LOCAL_CPPFLAGS...")
 
-                # Strategy: Add compiler flag to downgrade the warning before -Werror can elevate it
-                # Look for LOCAL_CFLAGS definition and append our flag
-                if 'LOCAL_CFLAGS' in content:
-                    # Find the LOCAL_CFLAGS line and append our flag
-                    lines = content.split('\n')
-                    patched_lines = []
-                    cflags_found = False
+                # Strategy: Add compiler flag to both CFLAGS and CPPFLAGS (hb-ft.cc is C++)
+                # Need to ensure our flags come AFTER any existing flags
+                lines = content.split('\n')
+                patched_lines = []
+                cflags_added = False
+                cppflags_added = False
 
-                    for line in lines:
-                        patched_lines.append(line)
-                        if 'LOCAL_CFLAGS' in line and not line.strip().startswith('#') and not cflags_found:
-                            # Add our flag on the next line
-                            patched_lines.append('# GENESIS ANDROID PATCH: Disable cast-function-type-strict error for NDK r28+')
-                            patched_lines.append('LOCAL_CFLAGS += -Wno-error=cast-function-type-strict -Wno-cast-function-type-strict')
-                            cflags_found = True
+                # Pass through all lines, adding our patches where appropriate
+                for line in lines:
+                    patched_lines.append(line)
 
-                    patched_content = '\n'.join(patched_lines)
-                else:
-                    # LOCAL_CFLAGS doesn't exist, add it after LOCAL_PATH
-                    lines = content.split('\n')
-                    patched_lines = []
+                    # Add to LOCAL_CFLAGS if found
+                    if 'LOCAL_CFLAGS' in line and ':=' in line and not line.strip().startswith('#') and not cflags_added:
+                        patched_lines.append('# GENESIS ANDROID PATCH: Disable cast-function-type-strict error for NDK r28+')
+                        patched_lines.append('LOCAL_CFLAGS += -Wno-error=cast-function-type-strict -Wno-cast-function-type-strict')
+                        cflags_added = True
 
-                    for line in lines:
-                        patched_lines.append(line)
-                        if 'LOCAL_PATH' in line and not line.strip().startswith('#'):
+                    # Add to LOCAL_CPPFLAGS if found (C++ specific - hb-ft.cc is C++)
+                    if 'LOCAL_CPPFLAGS' in line and ':=' in line and not line.strip().startswith('#') and not cppflags_added:
+                        patched_lines.append('# GENESIS ANDROID PATCH: Disable cast-function-type-strict error for NDK r28+')
+                        patched_lines.append('LOCAL_CPPFLAGS += -Wno-error=cast-function-type-strict -Wno-cast-function-type-strict')
+                        cppflags_added = True
+
+                    # If we find LOCAL_PATH and haven't added flags yet, add both after it
+                    if 'LOCAL_PATH' in line and not line.strip().startswith('#'):
+                        if not cflags_added and not cppflags_added:
                             patched_lines.append('')
                             patched_lines.append('# GENESIS ANDROID PATCH: Disable cast-function-type-strict error for NDK r28+')
                             patched_lines.append('LOCAL_CFLAGS := -Wno-error=cast-function-type-strict -Wno-cast-function-type-strict')
+                            patched_lines.append('LOCAL_CPPFLAGS := -Wno-error=cast-function-type-strict -Wno-cast-function-type-strict')
+                            cflags_added = True
+                            cppflags_added = True
 
-                    patched_content = '\n'.join(patched_lines)
+                patched_content = '\n'.join(patched_lines)
 
                 # Write patched file
                 with open(harfbuzz_mk_path, 'w') as f:
                     f.write(patched_content)
-                print("  ✅ Added -Wno-error=cast-function-type-strict to LOCAL_CFLAGS")
+                print("  ✅ Added -Wno-error=cast-function-type-strict to LOCAL_CFLAGS and LOCAL_CPPFLAGS")
                 print("  📝 Wrote patched Android.mk")
 
                 # Verify patch with SHA256 hash
