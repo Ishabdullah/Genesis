@@ -256,33 +256,62 @@ Build on a local machine with:
   - Need to remove references without breaking variable assignments
   - Multi-line assignments are fragile
 
-### Attempt 21: Regex-Based Makefile.am Patching (Build #29) 🔄
+### Attempt 21: Regex-Based Makefile.am Patching (Build #29) ❌
 - **Date:** 2025-11-08
 - **Config:** NDK 28c, custom recipe with improved Makefile.am patching
-- **Status:** 🔄 IN PROGRESS
+- **Result:** ❌ FAILED - Broke if/endif conditional logic
 - **Approach:** Use regex to remove tramp.c inline without breaking syntax
   - Patch #1: Comment out LT_SYS_SYMBOL_USCORE (line 223) ✅
-  - Patch #2: Regex replacement for tramp.c removal ✨ NEW
+  - Patch #2: Regex replacement for tramp.c removal
     - Pattern 1: Remove `src/tramp.c` from inline SOURCES lists
     - Pattern 2: Remove continuation lines that only contain `src/tramp.c \`
     - Pattern 3: Remove `tramp.lo` object file references
-  - Preserves Makefile.am structure and syntax
+- **Why it failed:**
+  - Regex removed tramp.c from within if/endif blocks
+  - Left unbalanced conditional logic in Makefile.am
+  - Error: `Makefile.am:46: error: endif without if`
+  - autoreconf failed during automake phase
+- **Lesson learned:**
+  - Makefile.am has complex conditional logic
+  - Can't just remove entries - must understand structure
+  - Even "smart" regex can break syntax
+  - Build system files are FRAGILE
+
+### Attempt 22: Source-Level Patching (Build #30) 🔄 ChatGPT Approach
+- **Date:** 2025-11-08
+- **Config:** NDK 28c, custom recipe patches SOURCE FILES only
+- **Status:** 🔄 IN PROGRESS
+- **Inspiration:** ChatGPT suggested patching tramp.c instead of build files
+- **Approach:** Make tramp.c Android-compatible, DON'T touch Makefile.am
+  - Patch #1: Comment out LT_SYS_SYMBOL_USCORE (line 223) ✅
+  - Patch #2: Wrap open_temp_exec_file() with Android guards ✨ NEW
+    - Find: `fd = open_temp_exec_file(...);`
+    - Wrap with: `#ifndef __ANDROID__ ... #else fd = -1; #endif`
+    - Fallback: Disable function by renaming it
+  - Keeps Makefile.am completely intact
 - **Why this should work:**
-  - Removes tramp.c references without commenting lines
-  - Preserves backslash continuations
-  - Handles both inline and multi-line cases
-  - Tested patterns based on libffi 3.4.4 Makefile.am
+  - NO build system changes (no syntax errors possible)
+  - tramp.c compiles normally (but Android-safe)
+  - Standard C preprocessor approach (well-tested)
+  - Much simpler and less invasive
+  - Works WITH build system instead of fighting it
 - **Implementation:**
   ```python
-  makefile_content = re.sub(r'\s+src/tramp\.c\s*', ' ', makefile_content)
-  makefile_content = re.sub(r'^\s*src/tramp\.c\s*\\?\s*$', '', makefile_content, flags=re.MULTILINE)
-  makefile_content = re.sub(r'\s+tramp\.lo\s*', ' ', makefile_content)
+  # Regex to find and wrap the call
+  pattern = r'(\s*)(fd\s*=\s*open_temp_exec_file\s*\([^;]+\);)'
+  replacement = (
+      r'\1#ifndef __ANDROID__  /* GENESIS ANDROID PATCH */\n'
+      r'\1\2\n'
+      r'\1#else\n'
+      r'\1fd = -1;  /* Android: Skip executable temp file creation */\n'
+      r'\1#endif'
+  )
   ```
 - **Expected result:**
-  - autoreconf: ✅ (Patch #1 working)
-  - automake: ✅ (Patch #2 preserves syntax)
-  - configure: ✅ (generated successfully)
-  - make: ✅ (no tramp.c to compile)
+  - autoreconf: ✅ (no Makefile.am errors!)
+  - configure: ✅ (normal generation)
+  - make: ✅ (tramp.c compiles with guards)
+  - APK: ✅ SUCCESS! 🎉
 
 ## 📝 RECOMMENDATIONS FOR THIS PROJECT
 
@@ -294,12 +323,13 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
 
 ## 📊 CURRENT STATUS
 
-**Total Attempts**: 21
-**Success Rate**: 0/20 (Attempt #21 in progress - Build #29)
+**Total Attempts**: 22
+**Success Rate**: 0/21 (Attempt #22 in progress - Build #30)
 **Root Cause #1**: LT_SYS_SYMBOL_USCORE macro obsolete in autoconf 2.71+ (Ubuntu 24.04) ✅ FIXED
 **Root Cause #2**: src/tramp.c uses open_temp_exec_file() not available on Android ⚙️ IN PROGRESS
-**Current Strategy**: Regex-based Makefile.am patching to exclude tramp.c without breaking syntax
-**Latest Analysis**: BUILD_27_ANALYSIS.md identified Makefile.am as best fix option
+**Current Strategy**: Source-level patching (wrap open_temp_exec_file with Android guards)
+**Latest Analysis**: BUILD_30_ANALYSIS.md - ChatGPT approach (patch source, not build files)
+**Key Insight**: Don't fight the build system - make the source Android-compatible instead!
 
 ## Build Configuration Summary
 
