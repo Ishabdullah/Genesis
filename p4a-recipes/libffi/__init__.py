@@ -9,19 +9,17 @@ from pythonforandroid.recipes.libffi import LibffiRecipe
 
 class LibffiRecipePatched(LibffiRecipe):
     """
-    Custom libffi recipe that patches the LT_SYS_SYMBOL_USCORE macro CALL
-    and disables trampolines for Android compatibility
+    Custom libffi recipe that applies TWO patches to configure.ac for Android
 
-    Build #24 discovery: There is ONLY line 223 with LT_SYS_SYMBOL_USCORE!
-    - No $ usage line exists in libffi 3.4.4
-    - Just the macro call: LT_SYS_SYMBOL_USCORE
-    - This macro is undefined in modern autoconf
-    - Solution: Comment it out entirely
+    PATCH #1: Comment out LT_SYS_SYMBOL_USCORE macro (Build #25)
+    - Line 223 has obsolete macro undefined in autoconf 2.71+
+    - Solution: Comment out the macro call
 
-    Build #25 discovery: Trampolines don't compile on Android!
-    - src/tramp.c:262: undefined function 'open_temp_exec_file'
-    - Trampolines not needed for Python/Kivy/pyjnius on Android
-    - Solution: Disable with --without-exec-trampoline
+    PATCH #2: Force disable trampolines at source level (Build #27)
+    - src/tramp.c uses open_temp_exec_file() not available on Android
+    - Build #26 tried configure flag but it wasn't applied
+    - Solution: Patch configure.ac to force enable_exec_trampoline=no
+    - This makes configure script skip trampoline code entirely
     """
 
     # Use latest stable libffi
@@ -30,22 +28,20 @@ class LibffiRecipePatched(LibffiRecipe):
     # Override patches - we do our own patching in build_arch()
     patches = []
 
-    # Disable trampolines for Android (Build #26 fix)
-    # Trampolines require executable memory mapping not available on Android
-    configured_args = ['--without-exec-trampoline']
-
     def build_arch(self, arch):
         """
-        Comment out the LT_SYS_SYMBOL_USCORE macro call at line 223
+        Apply TWO patches to configure.ac:
+        1. Comment out LT_SYS_SYMBOL_USCORE macro call at line 223
+        2. Disable trampolines for Android (source-level disable)
         """
         # Get build directory where libffi source was extracted
         build_dir = self.get_build_dir(arch.arch)
         configure_ac_path = os.path.join(build_dir, 'configure.ac')
 
         print("=" * 70)
-        print("🔧 PATCHING LIBFFI - Build #26 (Two fixes)")
+        print("🔧 PATCHING LIBFFI - Build #27 (Two source patches)")
         print("  Fix #1: Comment out LT_SYS_SYMBOL_USCORE macro (line 223)")
-        print("  Fix #2: Disable trampolines (--without-exec-trampoline)")
+        print("  Fix #2: Disable trampolines at SOURCE level in configure.ac")
         print(f"📁 Build dir: {build_dir}")
         print("=" * 70)
 
@@ -68,22 +64,14 @@ class LibffiRecipePatched(LibffiRecipe):
         if 'PATCHED BY GENESIS' in content:
             print("✅ Already patched, skipping")
         else:
-            print("🔍 Searching for LT_SYS_SYMBOL_USCORE macro call...")
-
-            patched = False
+            # PATCH #1: Comment out LT_SYS_SYMBOL_USCORE
+            print("\n🔍 PATCH #1: Searching for LT_SYS_SYMBOL_USCORE macro call...")
+            patch1_applied = False
             for i, line in enumerate(lines):
                 # Look for LT_SYS_SYMBOL_USCORE WITHOUT $ (macro call, not usage)
                 if 'LT_SYS_SYMBOL_USCORE' in line and '$' not in line:
                     line_num = i + 1
                     print(f"  ✅ Found macro CALL at line {line_num}: {line.strip()}")
-
-                    # Show context
-                    print(f"  📄 Context (5 lines before and after):")
-                    start = max(0, i - 5)
-                    end = min(len(lines), i + 6)
-                    for j in range(start, end):
-                        marker = "→→→" if j == i else "   "
-                        print(f"    {marker} Line {j+1}: {lines[j]}")
 
                     # Comment it out
                     lines[i] = ('# PATCHED BY GENESIS: LT_SYS_SYMBOL_USCORE is obsolete in modern libtool\n'
@@ -91,28 +79,102 @@ class LibffiRecipePatched(LibffiRecipe):
                                 '# Original line 223: ' + line)
 
                     print(f"  🔧 Commented out line {line_num}")
-                    print(f"  📝 Original: {line.strip()}")
-                    print(f"  📝 Replaced with comment")
-                    patched = True
+                    patch1_applied = True
                     break
 
-            if not patched:
-                print("  ❌ LT_SYS_SYMBOL_USCORE not found!")
-                print("  ⚠️  This is unexpected - build will likely fail")
+            if not patch1_applied:
+                print("  ❌ PATCH #1 FAILED: LT_SYS_SYMBOL_USCORE not found!")
             else:
-                # Write patched file
+                print("  ✅ PATCH #1 applied successfully!")
+
+            # PATCH #2: Disable trampolines
+            print("\n🔍 PATCH #2: Disabling exec trampolines for Android...")
+            patch2_applied = False
+
+            # Strategy: Find AC_ARG_ENABLE([pax-emutramp] section and add
+            # a forced disable of exec trampolines right after
+            for i, line in enumerate(lines):
+                # Look for the line AFTER pax-emutramp section ends
+                # This is around line 221-228 area
+                if 'fi)' in line and i > 0:
+                    # Check if previous lines have pax-emutramp
+                    context = '\n'.join(lines[max(0, i-10):i])
+                    if 'pax' in context.lower() or 'emutramp' in context.lower():
+                        # Insert our trampoline disable AFTER this section
+                        insert_line = i + 1
+
+                        # Skip any blank lines
+                        while insert_line < len(lines) and lines[insert_line].strip() == '':
+                            insert_line += 1
+
+                        # Check if next line is LT_SYS or FFI_EXEC_TRAMPOLINE
+                        if insert_line < len(lines):
+                            next_line = lines[insert_line]
+
+                            # Insert BEFORE LT_SYS_SYMBOL_USCORE or at trampoline section
+                            if 'LT_SYS_SYMBOL_USCORE' in next_line or 'FFI_EXEC_TRAMPOLINE' in next_line:
+                                # Insert our disable code here
+                                disable_code = [
+                                    '',
+                                    '# PATCHED BY GENESIS: Disable exec trampolines for Android (Build #27)',
+                                    '# Trampolines require open_temp_exec_file() not available on Android',
+                                    '# Force disable regardless of platform detection',
+                                    'enable_exec_trampoline=no',
+                                    'ac_cv_func_mmap_exec=no',
+                                    ''
+                                ]
+
+                                # Insert the lines
+                                for offset, new_line in enumerate(disable_code):
+                                    lines.insert(insert_line + offset, new_line)
+
+                                print(f"  ✅ Inserted trampoline disable code at line {insert_line}")
+                                print(f"  📝 Added: enable_exec_trampoline=no")
+                                print(f"  📝 Added: ac_cv_func_mmap_exec=no")
+                                patch2_applied = True
+                                break
+
+            if not patch2_applied:
+                print("  ⚠️  PATCH #2: Could not find ideal insertion point")
+                print("  ⚠️  Trying alternative: Force disable at end of AC checks")
+
+                # Alternative: Find first occurrence of FFI_EXEC_TRAMPOLINE_TABLE and force it
+                for i, line in enumerate(lines):
+                    if 'FFI_EXEC_TRAMPOLINE_TABLE' in line and '=' in line:
+                        print(f"  ✅ Found FFI_EXEC_TRAMPOLINE_TABLE at line {i+1}")
+                        # Insert disable BEFORE this line
+                        disable_code = [
+                            '# PATCHED BY GENESIS: Force disable trampolines for Android',
+                            'enable_exec_trampoline=no',
+                            'ac_cv_func_mmap_exec=no',
+                            ''
+                        ]
+                        for offset, new_line in enumerate(disable_code):
+                            lines.insert(i + offset, new_line)
+                        print(f"  ✅ PATCH #2 applied at line {i+1}")
+                        patch2_applied = True
+                        break
+
+            if not patch2_applied:
+                print("  ❌ PATCH #2 FAILED: Could not disable trampolines")
+            else:
+                print("  ✅ PATCH #2 applied successfully!")
+
+            # Write patched file
+            if patch1_applied or patch2_applied:
                 with open(configure_ac_path, 'w') as f:
                     f.write('\n'.join(lines))
-                print("  ✅ Patch applied successfully!")
+                print("\n✅ All patches written to configure.ac")
 
         print("=" * 70)
         print("📞 Calling parent build_arch (will run autoreconf + configure + make)")
-        print(f"   Configure args: {self.configured_args}")
-        print("   Expected: autoreconf ✅ → configure ✅ → make ✅")
+        print("   Trampolines disabled at SOURCE level (configure.ac patched)")
+        print("   Expected: autoreconf ✅ → configure ✅ → make ✅ (skip tramp.c)")
         print("=" * 70)
 
         # Now call parent which will run autoreconf on PATCHED configure.ac
-        # with --without-exec-trampoline flag to skip trampoline compilation
+        # Our patches force trampolines to be disabled at source level
+        # This causes generated configure script to skip trampoline code
         super().build_arch(arch)
 
 
