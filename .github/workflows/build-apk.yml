@@ -122,9 +122,9 @@ jobs:
 
           # Check SDL2_ttf recipe
           if [ -f "p4a-recipes/sdl2_ttf/__init__.py" ]; then
-            grep -q "SDL2TtfRecipe" p4a-recipes/sdl2_ttf/__init__.py && \
-              echo "✅ SDL2_ttf recipe using correct class name" || \
-              echo "⚠️  SDL2_ttf may have wrong import!"
+            grep -q "Android.mk" p4a-recipes/sdl2_ttf/__init__.py && \
+              echo "✅ SDL2_ttf HarfBuzz Android.mk patch verified" || \
+              echo "⚠️  SDL2_ttf patch may be missing!"
           else
             echo "⚠️  SDL2_ttf recipe missing!"
           fi

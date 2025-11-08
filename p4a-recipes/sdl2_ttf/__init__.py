@@ -1,11 +1,12 @@
 """
 Custom SDL2_ttf recipe that patches HarfBuzz for NDK r28+ compatibility
 
-Build #38: HarfBuzz function pointer cast fix (DYNAMIC IMPORT)
+Build #41: HarfBuzz function pointer cast fix (ANDROID.MK APPROACH)
 - NDK r28+ has stricter -Wcast-function-type-strict warnings (treated as errors)
 - HarfBuzz's hb-ft.cc has incompatible function pointer casts
-- Solution: Add #pragma to disable the warning for this file (cleanest approach)
-- Fix: Use dynamic import to find correct base class
+- Pragma approach failed because -Werror elevates warnings to errors
+- Solution: Modify Android.mk to add -Wno-error=cast-function-type-strict flag
+- This downgrades the specific warning before -Werror can elevate it
 """
 
 import os
@@ -37,10 +38,11 @@ class SDL2TtfRecipePatched(BaseRecipe):
     """
     Custom SDL2_ttf recipe that patches HarfBuzz for NDK r28+
 
-    PATCH: Disable strict function pointer cast warnings in hb-ft.cc
-    - File: external/harfbuzz/src/hb-ft.cc
+    PATCH: Disable strict function pointer cast warnings via Android.mk
+    - File: external/harfbuzz/Android.mk
     - Error: -Wcast-function-type-strict (cast from 'void (*)(FT_Face)' to 'void (*)(void *)')
-    - Fix: Add #pragma clang diagnostic ignored at top of file
+    - Fix: Add -Wno-error=cast-function-type-strict to LOCAL_CFLAGS
+    - Why: Pragma directives don't work when -Werror elevates warnings to errors
     """
 
     # Ensure name is set if using base Recipe class
@@ -48,63 +50,78 @@ class SDL2TtfRecipePatched(BaseRecipe):
 
     def build_arch(self, arch):
         """
-        Apply HarfBuzz patch BEFORE compilation
+        Apply HarfBuzz Android.mk patch BEFORE compilation
         """
         # SDL2_ttf is built as part of SDL2 bootstrap
         # The actual source is in the SDL2 bootstrap build directory
-        # Get the SDL2 bootstrap build directory
         from pythonforandroid.toolchain import current_directory
         import glob
 
         # Find SDL2_ttf source in bootstrap builds
         bootstrap_dir = os.path.join(self.ctx.build_dir, 'bootstrap_builds', 'sdl2')
-        hb_ft_path = os.path.join(bootstrap_dir, 'jni', 'SDL2_ttf', 'external', 'harfbuzz', 'src', 'hb-ft.cc')
+        harfbuzz_mk_path = os.path.join(bootstrap_dir, 'jni', 'SDL2_ttf', 'external', 'harfbuzz', 'Android.mk')
 
         print("=" * 70)
-        print("🔧 PATCHING SDL2_TTF/HARFBUZZ - Build #40 (NDK r28+ compatibility)")
-        print("  Fix: Disable -Wcast-function-type-strict in hb-ft.cc")
-        print("  Method: #pragma clang diagnostic push/pop (overrides -Werror)")
+        print("🔧 PATCHING SDL2_TTF/HARFBUZZ - Build #41 (NDK r28+ compatibility)")
+        print("  Fix: Add -Wno-error=cast-function-type-strict to Android.mk")
+        print("  Method: Modify LOCAL_CFLAGS in Android.mk makefile")
+        print("  Why: Pragma approach failed - -Werror elevates warnings to errors")
         print(f"📁 Bootstrap dir: {bootstrap_dir}")
-        print(f"📁 HarfBuzz file: {hb_ft_path}")
+        print(f"📁 Android.mk: {harfbuzz_mk_path}")
         print("=" * 70)
 
         patch_applied = False
-        if not os.path.exists(hb_ft_path):
-            print(f"⚠️  WARNING: hb-ft.cc not found at {hb_ft_path}")
+        if not os.path.exists(harfbuzz_mk_path):
+            print(f"⚠️  WARNING: Android.mk not found at {harfbuzz_mk_path}")
             print("  ⚠️  File may not exist in this SDL2_ttf version - skipping patch")
         else:
-            print("📖 Reading hb-ft.cc...")
-            with open(hb_ft_path, 'r') as f:
+            print("📖 Reading Android.mk...")
+            with open(harfbuzz_mk_path, 'r') as f:
                 content = f.read()
 
             # Check if already patched
             if 'GENESIS ANDROID PATCH' in content:
-                print("✅ hb-ft.cc already patched, skipping")
+                print("✅ Android.mk already patched, skipping")
                 patch_applied = True
             else:
-                print("\n🔍 Adding pragma to disable cast warning...")
+                print("\n🔍 Adding -Wno-error flag to LOCAL_CFLAGS...")
 
-                # Strategy: Use proper pragma push/pop to override -Werror
-                # This works even when the warning is elevated to an error
-                pragma_directive = '''/* GENESIS ANDROID PATCH: Disable strict function pointer cast warnings for NDK r28+ */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-function-type-strict"
+                # Strategy: Add compiler flag to downgrade the warning before -Werror can elevate it
+                # Look for LOCAL_CFLAGS definition and append our flag
+                if 'LOCAL_CFLAGS' in content:
+                    # Find the LOCAL_CFLAGS line and append our flag
+                    lines = content.split('\n')
+                    patched_lines = []
+                    cflags_found = False
 
-'''
+                    for line in lines:
+                        patched_lines.append(line)
+                        if 'LOCAL_CFLAGS' in line and not line.strip().startswith('#') and not cflags_found:
+                            # Add our flag on the next line
+                            patched_lines.append('# GENESIS ANDROID PATCH: Disable cast-function-type-strict error for NDK r28+')
+                            patched_lines.append('LOCAL_CFLAGS += -Wno-error=cast-function-type-strict -Wno-cast-function-type-strict')
+                            cflags_found = True
 
-                # Also add pop at the end of file
-                pragma_pop = '''
-#pragma clang diagnostic pop
-'''
+                    patched_content = '\n'.join(patched_lines)
+                else:
+                    # LOCAL_CFLAGS doesn't exist, add it after LOCAL_PATH
+                    lines = content.split('\n')
+                    patched_lines = []
 
-                # Prepend pragma to file content
-                patched_content = pragma_directive + content + pragma_pop
+                    for line in lines:
+                        patched_lines.append(line)
+                        if 'LOCAL_PATH' in line and not line.strip().startswith('#'):
+                            patched_lines.append('')
+                            patched_lines.append('# GENESIS ANDROID PATCH: Disable cast-function-type-strict error for NDK r28+')
+                            patched_lines.append('LOCAL_CFLAGS := -Wno-error=cast-function-type-strict -Wno-cast-function-type-strict')
+
+                    patched_content = '\n'.join(patched_lines)
 
                 # Write patched file
-                with open(hb_ft_path, 'w') as f:
+                with open(harfbuzz_mk_path, 'w') as f:
                     f.write(patched_content)
-                print("  ✅ Added #pragma clang diagnostic ignored")
-                print("  📝 Wrote patched hb-ft.cc")
+                print("  ✅ Added -Wno-error=cast-function-type-strict to LOCAL_CFLAGS")
+                print("  📝 Wrote patched Android.mk")
 
                 # Verify patch with SHA256 hash
                 import hashlib
@@ -115,18 +132,18 @@ class SDL2TtfRecipePatched(BaseRecipe):
 
         print("\n" + "=" * 70)
         if patch_applied:
-            print("✅ SDL2_TTF/HARFBUZZ PATCH COMPLETE!")
+            print("✅ SDL2_TTF/HARFBUZZ ANDROID.MK PATCH COMPLETE!")
         else:
             print("⚠️  SDL2_TTF/HARFBUZZ PATCH SKIPPED (may not be needed)")
         print("=" * 70)
 
         print("\n" + "=" * 70)
         print("📞 Calling parent build_arch (will compile SDL2_ttf)")
-        print("   PATCH: #pragma disables -Wcast-function-type-strict warning")
+        print("   PATCH: Android.mk adds -Wno-error=cast-function-type-strict")
         print("   Expected: HarfBuzz compiles ✅ → SDL2_ttf builds ✅ → APK SUCCESS! 🎉")
         print("=" * 70)
 
-        # Now call parent which will compile SDL2_ttf with patched HarfBuzz
+        # Now call parent which will compile SDL2_ttf with patched Android.mk
         super().build_arch(arch)
 
 
