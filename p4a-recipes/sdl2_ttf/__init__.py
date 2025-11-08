@@ -8,10 +8,10 @@ Build #36: HarfBuzz function pointer cast fix (SIMPLIFIED PRAGMA APPROACH)
 """
 
 import os
-from pythonforandroid.recipes.sdl2_ttf import LibSDL2_ttfRecipe
+from pythonforandroid.recipes.sdl2_ttf import SDL2TtfRecipe
 
 
-class LibSDL2_ttfRecipePatched(LibSDL2_ttfRecipe):
+class SDL2TtfRecipePatched(SDL2TtfRecipe):
     """
     Custom SDL2_ttf recipe that patches HarfBuzz for NDK r28+
 
@@ -92,4 +92,4 @@ class LibSDL2_ttfRecipePatched(LibSDL2_ttfRecipe):
         super().build_arch(arch)
 
 
-recipe = LibSDL2_ttfRecipePatched()
+recipe = SDL2TtfRecipePatched()
