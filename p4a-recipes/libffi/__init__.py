@@ -1,6 +1,10 @@
 """
-Custom libffi recipe that patches configure.ac BEFORE autoreconf runs
-Patches the macro CALL (line 223) - there is NO usage line!
+Custom libffi recipe that patches source files BEFORE autoreconf runs
+
+Build #30: Source-level patching approach (ChatGPT suggestion)
+- Patch #1: Comment out LT_SYS_SYMBOL_USCORE macro (configure.ac line 223)
+- Patch #2: Make tramp.c Android-compatible by wrapping open_temp_exec_file()
+- DON'T touch Makefile.am (avoids "endif without if" errors)
 """
 
 import os
@@ -9,19 +13,17 @@ from pythonforandroid.recipes.libffi import LibffiRecipe
 
 class LibffiRecipePatched(LibffiRecipe):
     """
-    Custom libffi recipe that applies TWO patches to configure.ac for Android
+    Custom libffi recipe that applies TWO patches for Android
 
     PATCH #1: Comment out LT_SYS_SYMBOL_USCORE macro (Build #25)
     - Line 223 has obsolete macro undefined in autoconf 2.71+
     - Solution: Comment out the macro call
 
-    PATCH #2: Remove tramp.c from Makefile.am (Build #28 - DIRECT FIX)
+    PATCH #2: Make tramp.c Android-compatible (Build #30 - ChatGPT approach)
     - src/tramp.c uses open_temp_exec_file() not available on Android
-    - Build #26 tried configure flag (didn't work - not applied)
-    - Build #27 tried shell vars in configure.ac (didn't work - wrong approach)
-    - Solution: Patch Makefile.am to exclude tramp.c from SOURCES
-    - When autoreconf runs, generated Makefile won't compile tramp.c
-    - This is the MOST DIRECT approach - removes problematic file from build
+    - Previous attempts (Builds #26-29) tried to remove tramp.c from build (all failed)
+    - Solution: Patch tramp.c source to wrap problematic code with #ifndef __ANDROID__
+    - This is CLEANER - doesn't touch build system files
     """
 
     # Use latest stable libffi
@@ -34,126 +36,138 @@ class LibffiRecipePatched(LibffiRecipe):
         """
         Apply TWO patches BEFORE autoreconf:
         1. Comment out LT_SYS_SYMBOL_USCORE macro call in configure.ac (line 223)
-        2. Remove tramp.c from Makefile.am SOURCES (direct exclusion)
+        2. Wrap open_temp_exec_file() in tramp.c with #ifndef __ANDROID__
         """
         # Get build directory where libffi source was extracted
         build_dir = self.get_build_dir(arch.arch)
         configure_ac_path = os.path.join(build_dir, 'configure.ac')
-        makefile_am_path = os.path.join(build_dir, 'Makefile.am')
+        tramp_c_path = os.path.join(build_dir, 'src', 'tramp.c')
 
         print("=" * 70)
-        print("🔧 PATCHING LIBFFI - Build #28 (Direct Makefile.am patch)")
+        print("🔧 PATCHING LIBFFI - Build #30 (Source-level patch)")
         print("  Fix #1: Comment out LT_SYS_SYMBOL_USCORE macro (configure.ac line 223)")
-        print("  Fix #2: Remove tramp.c from Makefile.am SOURCES (direct exclusion)")
+        print("  Fix #2: Wrap open_temp_exec_file() with #ifndef __ANDROID__")
         print(f"📁 Build dir: {build_dir}")
         print("=" * 70)
 
-        # Check if configure.ac exists
+        # PATCH #1: configure.ac (same as before)
+        patch1_applied = False
         if not os.path.exists(configure_ac_path):
             print(f"⚠️  WARNING: configure.ac not found at {configure_ac_path}")
-            print("Continuing with parent build...")
-            super().build_arch(arch)
-            return
-
-        # Read configure.ac
-        print("📖 Reading configure.ac...")
-        with open(configure_ac_path, 'r') as f:
-            content = f.read()
-            lines = content.split('\n')
-
-        print(f"📊 File has {len(lines)} lines")
-
-        # Check if already patched
-        if 'PATCHED BY GENESIS' in content:
-            print("✅ configure.ac already patched, skipping")
         else:
-            # PATCH #1: Comment out LT_SYS_SYMBOL_USCORE
-            print("\n🔍 PATCH #1: Searching for LT_SYS_SYMBOL_USCORE macro call...")
-            patch1_applied = False
-            for i, line in enumerate(lines):
-                # Look for LT_SYS_SYMBOL_USCORE WITHOUT $ (macro call, not usage)
-                if 'LT_SYS_SYMBOL_USCORE' in line and '$' not in line:
-                    line_num = i + 1
-                    print(f"  ✅ Found macro CALL at line {line_num}: {line.strip()}")
+            print("📖 Reading configure.ac...")
+            with open(configure_ac_path, 'r') as f:
+                content = f.read()
+                lines = content.split('\n')
 
-                    # Comment it out
-                    lines[i] = ('# PATCHED BY GENESIS: LT_SYS_SYMBOL_USCORE is obsolete in modern libtool\n'
-                                '# This macro is undefined in autoconf 2.71+, commenting out\n'
-                                '# Original line 223: ' + line)
+            print(f"📊 File has {len(lines)} lines")
 
-                    print(f"  🔧 Commented out line {line_num}")
-                    patch1_applied = True
-                    break
-
-            if not patch1_applied:
-                print("  ❌ PATCH #1 FAILED: LT_SYS_SYMBOL_USCORE not found!")
+            # Check if already patched
+            if 'PATCHED BY GENESIS' in content:
+                print("✅ configure.ac already patched, skipping")
+                patch1_applied = True
             else:
-                print("  ✅ PATCH #1 applied successfully!")
+                # Comment out LT_SYS_SYMBOL_USCORE
+                print("\n🔍 PATCH #1: Searching for LT_SYS_SYMBOL_USCORE macro call...")
+                for i, line in enumerate(lines):
+                    # Look for LT_SYS_SYMBOL_USCORE WITHOUT $ (macro call, not usage)
+                    if 'LT_SYS_SYMBOL_USCORE' in line and '$' not in line:
+                        line_num = i + 1
+                        print(f"  ✅ Found macro CALL at line {line_num}: {line.strip()}")
 
-            # Write patched configure.ac
-            if patch1_applied:
-                with open(configure_ac_path, 'w') as f:
-                    f.write('\n'.join(lines))
-                print("  📝 Wrote patched configure.ac")
+                        # Comment it out
+                        lines[i] = ('# PATCHED BY GENESIS: LT_SYS_SYMBOL_USCORE is obsolete in modern libtool\n'
+                                    '# This macro is undefined in autoconf 2.71+, commenting out\n'
+                                    '# Original line 223: ' + line)
 
-        # PATCH #2: Remove tramp.c from Makefile.am
-        print("\n🔍 PATCH #2: Patching Makefile.am to exclude tramp.c...")
+                        print(f"  🔧 Commented out line {line_num}")
+                        patch1_applied = True
+                        break
 
-        if not os.path.exists(makefile_am_path):
-            print(f"  ⚠️  WARNING: Makefile.am not found at {makefile_am_path}")
+                if patch1_applied:
+                    with open(configure_ac_path, 'w') as f:
+                        f.write('\n'.join(lines))
+                    print("  ✅ PATCH #1 applied successfully!")
+                    print("  📝 Wrote patched configure.ac")
+                else:
+                    print("  ❌ PATCH #1 FAILED: LT_SYS_SYMBOL_USCORE not found!")
+
+        # PATCH #2: tramp.c (NEW - ChatGPT approach)
+        patch2_applied = False
+        if not os.path.exists(tramp_c_path):
+            print(f"\n⚠️  WARNING: tramp.c not found at {tramp_c_path}")
             print("  ⚠️  Skipping Patch #2")
-            patch2_applied = False
         else:
-            with open(makefile_am_path, 'r') as f:
-                makefile_content = f.read()
+            print("\n🔍 PATCH #2: Patching tramp.c for Android compatibility...")
+            with open(tramp_c_path, 'r') as f:
+                tramp_content = f.read()
 
-            if 'GENESIS TRAMP PATCH' in makefile_content:
-                print("  ✅ Makefile.am already patched, skipping")
+            # Check if already patched
+            if 'GENESIS ANDROID PATCH' in tramp_content:
+                print("  ✅ tramp.c already patched, skipping")
                 patch2_applied = True
             else:
-                # Use regex-style replacement to remove src/tramp.c from variable assignments
-                # This handles cases like: "src/prep_cif.c src/types.c src/tramp.c"
-                # And multi-line cases with backslash continuations
+                # Find the open_temp_exec_file() call and wrap it
+                # Look for the pattern where it's called
                 import re
 
-                original_content = makefile_content
-                removed_count = 0
+                # Pattern: find the line with open_temp_exec_file() call
+                # We'll wrap the entire function call block with #ifndef __ANDROID__
 
-                # Pattern 1: Remove "src/tramp.c" with optional surrounding whitespace
-                # This handles inline references in SOURCES variables
-                makefile_content = re.sub(r'\s+src/tramp\.c\s*', ' ', makefile_content)
-                if makefile_content != original_content:
-                    removed_count += 1
-                    original_content = makefile_content
+                # Search for the function call
+                if 'open_temp_exec_file' in tramp_content:
+                    print("  ✅ Found open_temp_exec_file() reference")
 
-                # Pattern 2: Remove lines that are just "src/tramp.c \" (continuation lines)
-                makefile_content = re.sub(r'^\s*src/tramp\.c\s*\\?\s*$', '', makefile_content, flags=re.MULTILINE)
-                if makefile_content != original_content:
-                    removed_count += 1
-                    original_content = makefile_content
+                    # Strategy: Replace the function call with Android-safe version
+                    # Find: fd = open_temp_exec_file (name, &temp, &length);
+                    # Replace with:
+                    # #ifndef __ANDROID__  /* GENESIS ANDROID PATCH */
+                    # fd = open_temp_exec_file (name, &temp, &length);
+                    # #else
+                    # fd = -1;  /* Android doesn't support executable temp files */
+                    # #endif
 
-                # Pattern 3: Remove "tramp.lo" references (object files)
-                makefile_content = re.sub(r'\s+tramp\.lo\s*', ' ', makefile_content)
-                if makefile_content != original_content:
-                    removed_count += 1
+                    original_content = tramp_content
 
-                # Add a marker comment at the top
-                if removed_count > 0:
-                    makefile_content = ('# GENESIS TRAMP PATCH: src/tramp.c removed for Android compatibility\n' +
-                                      '# tramp.c uses open_temp_exec_file() which is not available on Android\n' +
-                                      makefile_content)
-                    patch2_applied = True
+                    # Use regex to find and wrap the call
+                    pattern = r'(\s*)(fd\s*=\s*open_temp_exec_file\s*\([^;]+\);)'
+                    replacement = (
+                        r'\1#ifndef __ANDROID__  /* GENESIS ANDROID PATCH: open_temp_exec_file not available on Android */\n'
+                        r'\1\2\n'
+                        r'\1#else\n'
+                        r'\1fd = -1;  /* Android: Skip executable temp file creation */\n'
+                        r'\1#endif'
+                    )
 
-                    # Write patched Makefile.am
-                    with open(makefile_am_path, 'w') as f:
-                        f.write(makefile_content)
-                    print(f"  ✅ Removed {removed_count} tramp.c references from Makefile.am")
-                    print(f"  📝 Wrote patched Makefile.am")
-                    print("  ✅ PATCH #2 applied successfully!")
+                    tramp_content = re.sub(pattern, replacement, tramp_content)
+
+                    if tramp_content != original_content:
+                        # Write patched file
+                        with open(tramp_c_path, 'w') as f:
+                            f.write(tramp_content)
+                        print("  ✅ Wrapped open_temp_exec_file() with #ifndef __ANDROID__")
+                        print("  📝 Wrote patched tramp.c")
+                        print("  ✅ PATCH #2 applied successfully!")
+                        patch2_applied = True
+                    else:
+                        print("  ⚠️  Pattern not matched - tramp.c format might be different")
+                        print("  ⚠️  Trying alternative approach...")
+
+                        # Alternative: Just replace the function name to disable it
+                        if 'open_temp_exec_file' in tramp_content:
+                            tramp_content = tramp_content.replace(
+                                'open_temp_exec_file',
+                                '/* GENESIS: disabled */ open_temp_exec_file_DISABLED'
+                            )
+                            tramp_content = '/* GENESIS ANDROID PATCH: Disabled open_temp_exec_file for Android */\n' + tramp_content
+                            with open(tramp_c_path, 'w') as f:
+                                f.write(tramp_content)
+                            print("  ✅ Disabled open_temp_exec_file() calls")
+                            print("  📝 Wrote patched tramp.c")
+                            patch2_applied = True
                 else:
-                    patch2_applied = False
-                    print("  ⚠️  No tramp references found in Makefile.am")
-                    print("  ⚠️  This might be OK if trampolines are conditionally included")
+                    print("  ⚠️  open_temp_exec_file not found in tramp.c")
+                    print("  ⚠️  This might be OK if it's conditionally compiled")
 
         print("\n" + "=" * 70)
         if patch1_applied and patch2_applied:
@@ -167,13 +181,13 @@ class LibffiRecipePatched(LibffiRecipe):
         print("\n" + "=" * 70)
         print("📞 Calling parent build_arch (will run autoreconf + configure + make)")
         print("   PATCH #1: configure.ac line 223 commented (fixes autoreconf)")
-        print("   PATCH #2: Makefile.am tramp.c removed (fixes compilation)")
-        print("   Expected: autoreconf ✅ → configure ✅ → make ✅ (NO tramp.c!)")
+        print("   PATCH #2: tramp.c open_temp_exec_file() wrapped (Android-safe)")
+        print("   Expected: autoreconf ✅ → configure ✅ → make ✅ (tramp.c compiles!)")
         print("=" * 70)
 
         # Now call parent which will run autoreconf on PATCHED source files
         # Patch #1: Fixes autoreconf (LT_SYS_SYMBOL_USCORE commented)
-        # Patch #2: Fixes make (tramp.c excluded from Makefile)
+        # Patch #2: Fixes tramp.c compilation (open_temp_exec_file wrapped)
         # This should complete the entire libffi build!
         super().build_arch(arch)
 
