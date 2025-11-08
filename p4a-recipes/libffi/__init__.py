@@ -135,12 +135,14 @@ class LibffiRecipePatched(LibffiRecipe):
                     original_content = tramp_content
 
                     # Use regex to find and wrap the call
-                    pattern = r'(\s*)(fd\s*=\s*open_temp_exec_file\s*\([^;]+\);)'
+                    # Matches: "fd = ..." or "prefix.fd = ..."
+                    # Example: "tramp_globals.fd = open_temp_exec_file ();"
+                    pattern = r'(\s*)(\w+\.)?fd\s*=\s*open_temp_exec_file\s*\([^)]*\)\s*;'
                     replacement = (
                         r'\1#ifndef __ANDROID__  /* GENESIS ANDROID PATCH: open_temp_exec_file not available on Android */\n'
-                        r'\1\2\n'
+                        r'\1\2fd = open_temp_exec_file ();\n'
                         r'\1#else\n'
-                        r'\1fd = -1;  /* Android: Skip executable temp file creation */\n'
+                        r'\1\2fd = -1;  /* Android: Skip executable temp file creation */\n'
                         r'\1#endif'
                     )
 
