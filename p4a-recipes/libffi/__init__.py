@@ -111,32 +111,47 @@ class LibffiRecipePatched(LibffiRecipe):
                 print("  ✅ Makefile.am already patched, skipping")
                 patch2_applied = True
             else:
-                makefile_lines = makefile_content.split('\n')
-                patch2_applied = False
+                # Use regex-style replacement to remove src/tramp.c from variable assignments
+                # This handles cases like: "src/prep_cif.c src/types.c src/tramp.c"
+                # And multi-line cases with backslash continuations
+                import re
+
+                original_content = makefile_content
                 removed_count = 0
 
-                # Find and comment out all lines containing tramp
-                new_makefile_lines = []
-                for line in makefile_lines:
-                    if 'tramp' in line.lower() and ('src/' in line or '.lo' in line or '.c' in line):
-                        # This line references tramp source file
-                        if not line.strip().startswith('#'):
-                            new_makefile_lines.append('# GENESIS TRAMP PATCH: ' + line)
-                            removed_count += 1
-                            patch2_applied = True
-                        else:
-                            new_makefile_lines.append(line)
-                    else:
-                        new_makefile_lines.append(line)
+                # Pattern 1: Remove "src/tramp.c" with optional surrounding whitespace
+                # This handles inline references in SOURCES variables
+                makefile_content = re.sub(r'\s+src/tramp\.c\s*', ' ', makefile_content)
+                if makefile_content != original_content:
+                    removed_count += 1
+                    original_content = makefile_content
 
-                if patch2_applied:
+                # Pattern 2: Remove lines that are just "src/tramp.c \" (continuation lines)
+                makefile_content = re.sub(r'^\s*src/tramp\.c\s*\\?\s*$', '', makefile_content, flags=re.MULTILINE)
+                if makefile_content != original_content:
+                    removed_count += 1
+                    original_content = makefile_content
+
+                # Pattern 3: Remove "tramp.lo" references (object files)
+                makefile_content = re.sub(r'\s+tramp\.lo\s*', ' ', makefile_content)
+                if makefile_content != original_content:
+                    removed_count += 1
+
+                # Add a marker comment at the top
+                if removed_count > 0:
+                    makefile_content = ('# GENESIS TRAMP PATCH: src/tramp.c removed for Android compatibility\n' +
+                                      '# tramp.c uses open_temp_exec_file() which is not available on Android\n' +
+                                      makefile_content)
+                    patch2_applied = True
+
                     # Write patched Makefile.am
                     with open(makefile_am_path, 'w') as f:
-                        f.write('\n'.join(new_makefile_lines))
+                        f.write(makefile_content)
                     print(f"  ✅ Removed {removed_count} tramp.c references from Makefile.am")
                     print(f"  📝 Wrote patched Makefile.am")
                     print("  ✅ PATCH #2 applied successfully!")
                 else:
+                    patch2_applied = False
                     print("  ⚠️  No tramp references found in Makefile.am")
                     print("  ⚠️  This might be OK if trampolines are conditionally included")
 
