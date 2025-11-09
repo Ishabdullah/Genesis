@@ -6,7 +6,7 @@
 
 **Privacy-First AI Assistant for Android**
 
-[![Version](https://img.shields.io/badge/Version-2.3.0--preview-blue.svg)](https://github.com/Ishabdullah/Genesis)
+[![Version](https://img.shields.io/badge/Version-0.1.0--alpha-orange.svg)](https://github.com/Ishabdullah/Genesis)
 [![Platform](https://img.shields.io/badge/Platform-Android%207.0%2B-green.svg)](https://www.android.com)
 [![Build](https://img.shields.io/badge/Build-Automated-brightgreen.svg)](https://github.com/Ishabdullah/Genesis/actions)
 [![Branch](https://img.shields.io/badge/Branch-claude%2Fgenesis--android--production-orange.svg)](#)
@@ -21,34 +21,39 @@
 
 This is the **Android App** branch of Genesis - transforming the powerful Termux-based AI workstation into a native Android application with a futuristic UI.
 
-**Branch:** `claude/genesis-android-production-011CUsnEhM8wFNiRFhG1A4SC`
-**Status:** 🔄 In Development - Preview Version
-**Stage:** Phase 3 Complete - UI Shell Ready
+**Branch:** `claude/fix-sdl2-path-production-011CUui9efZbDy8odJz49ZAp`
+**Status:** 🔄 In Active Development - Build System Optimization
+**Stage:** Phase 3 - Resolving NDK r28+ Compatibility (Major Progress)
 
 ---
 
-## ✨ What's New in Android Version
+## ✨ What's Being Built
 
-### 🎨 Futuristic UI
+### 🎨 UI Design (Code Complete)
 - **Neon Theme** - Cyberpunk-inspired cyan/blue color scheme
 - **Custom Widgets** - Styled buttons, inputs, and message bubbles
-- **Smooth Animations** - Polished, responsive interactions
+- **Kivy Framework** - Cross-platform UI implementation
 - **DNA Helix Branding** - Unique app icon and theme
 
-### 📱 Android-Native Features
-- **Material Design** - Modern Android UI patterns
-- **Gesture Support** - Touch-optimized interface
-- **Dark Theme** - Easy on the eyes
-- **Portrait/Landscape** - Adaptive layout
+### 🔧 Build System (Active Development)
+- **NDK r28+ Compatibility** - Custom p4a recipes for modern Android
+- **Automated Fixes** - libffi, SDL2, HarfBuzz patches
+- **GitHub Actions** - CI/CD pipeline with comprehensive logging
+- **Progress Tracking** - Detailed BUILD_FIXES_LOG.md
 
-### 🚀 Preview Capabilities (Current)
-- ✅ Chat interface with message history
-- ✅ Futuristic UI with neon styling
-- ✅ Quick action buttons
-- ✅ Status indicators
-- ✅ Simple conversational responses
+### ✅ What's Working Now
+- ✅ UI code implemented (Kivy-based)
+- ✅ Build automation with GitHub Actions
+- ✅ NDK r28+ compatibility patches (libffi, SDL2, HarfBuzz)
+- ✅ Custom p4a recipes
+- ✅ App icon and branding assets
 
-### 🔄 Coming Soon
+### 🔄 In Progress
+- 🔄 Kivy compilation optimization
+- 🔄 First successful APK generation
+- 🔄 Build pipeline stabilization
+
+### ⏳ Planned Features
 - ⏳ Full AI inference (LLM integration)
 - ⏳ Device control (GPS, camera, flashlight)
 - ⏳ NPU/GPU/CPU acceleration
@@ -60,20 +65,24 @@ This is the **Android App** branch of Genesis - transforming the powerful Termux
 
 ## 📥 Download APK
 
-### Latest Build
+### Build Status
 
-**Download from GitHub Actions:**
-1. Go to [Actions Tab](https://github.com/Ishabdullah/Genesis/actions)
-2. Click latest "Build Genesis Android APK" workflow
-3. Download `genesis-ai-apk` from Artifacts (after build completes)
-4. Extract ZIP and install APK
+**Current Status:** ⚙️ Build system under active development
 
-**Build Status:** Check [GitHub Actions](https://github.com/Ishabdullah/Genesis/actions) for current build status
+The build system is currently being optimized for Android NDK r28+ compatibility. Major progress has been made:
+- ✅ libffi compilation issues resolved (Build #30)
+- ✅ SDL2 ALooper compatibility fixed (Build #34)
+- ✅ HarfBuzz function pointer casts fixed (Build #45)
+- 🔄 Kivy compilation optimization in progress
 
-**Requirements:**
+**Check Build Progress:** [GitHub Actions](https://github.com/Ishabdullah/Genesis/actions/workflows/build-apk.yml)
+
+**Note:** APK downloads will be available once the build pipeline completes successfully. See [BUILD_FIXES_LOG.md](BUILD_FIXES_LOG.md) for detailed progress tracking.
+
+**Target Requirements:**
 - Android 7.0+ (API 21+)
 - 50+ MB storage
-- ARM 32/64-bit processor
+- ARM 64-bit processor (arm64-v8a)
 
 ---
 
@@ -98,7 +107,7 @@ Open Genesis and explore the futuristic UI!
 
 ## 🎯 Current Features
 
-### ✅ Working Now (Preview v2.3.0)
+### 🔄 In Development (v0.1.0-alpha)
 
 **UI & Interaction:**
 - 💬 Chat interface with scrollable history
@@ -151,36 +160,46 @@ Open Genesis and explore the futuristic UI!
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| **Phase 1** | Foundation & Architecture | ✅ Complete |
-| **Phase 2** | Hardware Acceleration | ✅ Complete |
-| **Phase 3** | Build System & UI | ✅ Complete |
-| **Phase 4** | Device Integration | 🔄 Next |
+| **Phase 1** | Foundation & Architecture | 🔄 In Progress |
+| **Phase 2** | Hardware Acceleration | ⏳ Pending |
+| **Phase 3** | Build System & UI | 🔄 Active Development |
+| **Phase 4** | Device Integration | ⏳ Pending |
 | **Phase 5** | LLM Integration | ⏳ Pending |
 | **Phase 6-12** | Advanced Features | ⏳ Pending |
 
-**Overall Progress:** ~25% (Phase 3 of 12)
+**Overall Progress:** ~15% (Early Phase 3 - Build System Focus)
 
-### What's Done ✅
+### Recent Achievements ✅
 
-- [x] Futuristic Android UI built
-- [x] GitHub Actions build pipeline
+**Build System (35 iterations):**
+- [x] NDK r28+ libffi compatibility (Build #30)
+- [x] SDL2 ALooper_pollAll→pollOnce fix (Build #34)
+- [x] HarfBuzz C++ type-safety patches (Build #45)
+- [x] Custom p4a recipes for NDK compatibility
+- [x] GitHub Actions CI/CD pipeline
+- [x] Comprehensive build documentation
+
+**UI Development:**
+- [x] Futuristic neon theme design (Kivy)
+- [x] Chat interface implementation
+- [x] Custom widgets and styling
 - [x] App icon and branding
-- [x] Custom styled widgets
-- [x] Chat interface functional
-- [x] Quick action buttons
-- [x] Status indicators
-- [x] Build automation
+- [x] Quick action buttons UI
 
-### What's Next 🔄
+### Current Focus 🔄
 
-- [ ] Integrate LLM inference
-- [ ] Add device control APIs
-- [ ] Implement hardware acceleration
-- [ ] Package AI model
-- [ ] Add voice support
-- [ ] File operations UI
-- [ ] Settings screen
-- [ ] Performance optimization
+**Active Work:**
+- [ ] Complete Kivy compilation for NDK r28+
+- [ ] Resolve remaining build dependencies
+- [ ] Test APK generation
+- [ ] Verify app installation and runtime
+
+**Next Steps:**
+- [ ] Stabilize build pipeline
+- [ ] First successful APK build
+- [ ] Runtime testing and debugging
+- [ ] Device integration APIs
+- [ ] LLM integration planning
 
 ---
 
@@ -303,33 +322,36 @@ ls -lh bin/*.apk
 
 ## 🛣️ Roadmap
 
-### v2.3.0-preview (Current) ✅
-- Futuristic UI implementation
-- Basic chat interface
-- Quick action buttons
-- App branding and icon
-- GitHub Actions build
+### v0.1.0-alpha (Current) 🔄
+- Build system optimization
+- NDK r28+ compatibility fixes
+- UI code implementation (Kivy)
+- GitHub Actions CI/CD
+- First successful APK generation
 
-### v2.4.0 (Next Release)
+### v0.2.0-alpha
+- Functional APK installation
+- Runtime stability
+- Basic app lifecycle
+- Initial device testing
+
+### v0.5.0-beta
+- Device integration APIs
+- Basic AI responses
+- Core functionality working
+- Internal testing
+
+### v0.9.0-beta
 - LLM integration
-- Device control APIs
 - Hardware acceleration
-- Voice input support
-- Settings screen
+- Voice support
+- Feature-complete beta
 
-### v2.5.0
-- File operations
-- Code execution
-- Web search
-- Advanced memory
-- Performance optimization
-
-### v3.0.0 (Full Release)
-- All features complete
-- App store ready
-- Comprehensive testing
-- Documentation complete
-- Public release
+### v1.0.0 (First Release)
+- All core features stable
+- Public testing
+- Bug fixes and optimization
+- Official release candidate
 
 ---
 
@@ -356,25 +378,24 @@ ls -lh bin/*.apk
 ## ❓ FAQ
 
 ### Is this the full Genesis AI?
-Not yet. This is a **preview version** showcasing the UI. Full AI capabilities are being integrated.
+No, this is in early development. The **build system is currently being optimized** for Android NDK r28+ compatibility. The UI code exists but APK builds are still being finalized.
 
-### When will it be feature-complete?
-Following the 12-phase plan in IMPLEMENTATION_PLAN.md. Estimated 12-16 weeks for full release.
+### When will it be ready to use?
+The project is following a 12-phase plan (see IMPLEMENTATION_PLAN.md). Currently in Phase 3 focusing on build system stability. First usable APK expected after build pipeline completion, then AI integration will begin.
 
-### Can I use it now?
-Yes! The UI and chat interface work. Full AI features coming soon.
+### Can I download and test it now?
+Not yet. The build system has made major progress (35 builds fixing NDK compatibility issues), but a successful APK has not been generated yet. Check [GitHub Actions](https://github.com/Ishabdullah/Genesis/actions) for current build status.
 
-### Will it work offline?
-Yes, once LLM integration is complete, it will work 100% offline.
+### What's the current blocker?
+Build system optimization for Android NDK r28+. Major compatibility issues have been resolved (libffi, SDL2, HarfBuzz), with Kivy compilation currently in progress.
+
+### How can I track progress?
+- **Live builds:** [GitHub Actions](https://github.com/Ishabdullah/Genesis/actions)
+- **Detailed log:** [BUILD_FIXES_LOG.md](BUILD_FIXES_LOG.md) documents all 45+ build attempts
+- **This README:** Updated to reflect current factual status
 
 ### What about the Termux version?
-The original Termux version is still available on the main branch. This is the Android app version.
-
-### How is this different from the CLI version?
-- Native Android app vs Termux CLI
-- Graphical UI vs text-only
-- Touch interface vs keyboard-only
-- More accessible to general users
+The original Termux CLI version is on a different branch. This Android app version is being built from scratch with a native UI.
 
 ---
 
@@ -436,11 +457,12 @@ MIT License - See LICENSE file for details
 
 ## 🎯 Current Status Summary
 
-**What Works:** ✅ UI, Chat Interface, Basic Responses
-**What's Coming:** ⏳ AI, Device Control, Advanced Features
-**Build Status:** 🔄 Check [Actions](https://github.com/Ishabdullah/Genesis/actions)
-**Phase:** 3 of 12 (~25% complete)
-**Version:** 2.3.0-preview
+**Build System:** 🔄 NDK r28+ compatibility optimization (35+ builds, major progress)
+**What Works:** ✅ Custom p4a recipes, libffi/SDL2/HarfBuzz patches
+**What's Next:** 🔄 Kivy compilation, first APK generation
+**Build Status:** Check [Actions](https://github.com/Ishabdullah/Genesis/actions)
+**Phase:** Early Phase 3 (~15% complete)
+**Version:** 0.1.0-alpha (pre-release development)
 
 ---
 
@@ -456,8 +478,10 @@ MIT License - See LICENSE file for details
 
 Made with 🧬 by the Genesis AI Team
 
-**Version 2.3.0-preview** • Built for Android 7.0+
+**Version 0.1.0-alpha** • In Active Development • Built for Android 7.0+
 
 *Privacy-First • On-Device • Open Source*
+
+⚠️ **Note:** Pre-v1.0 development - APK builds not yet available
 
 </div>
