@@ -1,19 +1,18 @@
 """
-Genesis Android Build - Kivy Recipe (Build #46)
+Genesis Android Build - Kivy Recipe (Build #46 - Revised)
 
-Filters host system include paths during Kivy cross-compilation for Android.
+Patches Kivy's setup.py to prevent host system header inclusion during Android cross-compilation.
 
-Issue: Build environment includes host system headers (/usr/include/x86_64-linux-gnu)
-       when compiling Kivy for Android, causing __GNUC_PREREQ macro conflicts.
+Issue: Kivy's setup.py calls pkg-config which returns host system paths, bypassing environment filtering.
 
-Root Cause: Kivy's setup.py runs on host system and picks up host SDL2/harfbuzz paths
-            via pkg-config, which then get mixed with Android NDK headers.
+Root Cause: setup.py runs subprocess calls to pkg-config on host, gets x86_64 paths, adds them to include_dirs.
 
-Solution: Override get_recipe_env to filter CFLAGS/CPPFLAGS, removing host includes.
+Solution: Patch setup.py before build to disable pkg-config calls during Android cross-compilation.
 """
 
 from pythonforandroid.recipes.kivy import KivyRecipe
 from pythonforandroid.logger import info, warning
+from pythonforandroid.util import current_directory
 import os
 
 
@@ -21,89 +20,144 @@ class KivyRecipeBuild46(KivyRecipe):
     """
     Custom Kivy recipe for Genesis Android build.
 
-    Fixes cross-compilation header conflicts in NDK r28+ by filtering out
-    host system include paths from the build environment.
+    Fixes cross-compilation header conflicts by patching setup.py to skip
+    host system pkg-config calls during Android builds.
     """
 
-    def get_recipe_env(self, arch, **kwargs):
+    def build_arch(self, arch):
         """
-        Override environment to filter out host system include paths.
+        Override build_arch to patch setup.py before building.
 
-        The parent recipe's environment may contain host paths like:
-        - /usr/include/SDL2
-        - /usr/include/harfbuzz
-        - /usr/lib/x86_64-linux-gnu/glib-2.0/include
-
-        These cause conflicts when cross-compiling for Android.
+        Patches Kivy's setup.py to prevent pkg-config from adding host system
+        include paths during Android cross-compilation.
         """
         info("=" * 70)
-        info("🔧 PATCHING KIVY ENV - Build #46 (NDK r28+ cross-compilation)")
-        info("  Fix: Filter host system include paths from CFLAGS/CPPFLAGS")
-        info("  Issue: Host headers conflict with Android NDK headers")
+        info("🔧 PATCHING KIVY SETUP.PY - Build #46 (NDK r28+ cross-compilation)")
+        info("  Fix: Disable host pkg-config during Android build")
+        info("  Issue: setup.py calls pkg-config, gets host x86_64 paths")
+        info(f"📁 Build dir: {self.get_build_dir(arch.arch)}")
         info("=" * 70)
 
-        # Get parent environment
-        env = super().get_recipe_env(arch, **kwargs)
+        with current_directory(self.get_build_dir(arch.arch)):
+            setup_py_path = 'setup.py'
+            info(f"📖 Reading {setup_py_path}...")
 
-        # Host system paths to filter out
-        host_prefixes = (
-            '/usr/include',
-            '/usr/lib/x86_64-linux-gnu',
-            '/usr/lib/aarch64-linux-gnu',
-            '/usr/lib64',
-            '/lib/x86_64-linux-gnu',
-            '/lib/aarch64-linux-gnu',
-            '/usr/local/include',
-        )
+            try:
+                with open(setup_py_path, 'r') as f:
+                    setup_content = f.read()
 
-        def filter_flags(flags_str):
-            """Remove host system -I and -L flags from a space-separated string."""
-            if not flags_str:
-                return flags_str
+                # Create patch to disable pkg-config for Android builds
+                # Insert this early in the file, after imports
+                patch_code = '''
+# GENESIS ANDROID PATCH: Disable host pkg-config during cross-compilation (Build #46)
+import os as _patch_os
+import subprocess as _patch_subprocess
 
-            parts = flags_str.split()
-            filtered = []
-            skip_next = False
+if _patch_os.environ.get('ANDROID_NDK') or _patch_os.environ.get('ANDROIDNDK'):
+    print("[GENESIS PATCH] Android cross-compilation detected - disabling pkg-config")
 
-            for i, part in enumerate(parts):
-                if skip_next:
-                    skip_next = False
-                    continue
+    # Save original subprocess functions
+    _original_check_output = _patch_subprocess.check_output
+    _original_run = _patch_subprocess.run
+    _original_Popen = _patch_subprocess.Popen
 
-                # Check for -I/path or -I /path patterns
-                if part == '-I' or part == '-L':
-                    # Next item is the path
-                    if i + 1 < len(parts):
-                        path = parts[i + 1]
-                        if any(path.startswith(prefix) for prefix in host_prefixes):
-                            info(f"  [FILTERED] {part} {path}")
-                            skip_next = True
-                            continue
+    def _patched_check_output(cmd, *args, **kwargs):
+        """Block pkg-config calls during Android builds"""
+        if isinstance(cmd, (list, tuple)) and len(cmd) > 0:
+            if 'pkg-config' in str(cmd[0]) or any('pkg-config' in str(arg) for arg in cmd):
+                print(f"[GENESIS PATCH] Blocking pkg-config call: {cmd}")
+                # Return empty output to prevent host paths
+                return b''
+        return _original_check_output(cmd, *args, **kwargs)
 
-                # Check for -Ipath or -Lpath patterns
-                if part.startswith('-I') or part.startswith('-L'):
-                    path = part[2:]
-                    if any(path.startswith(prefix) for prefix in host_prefixes):
-                        info(f"  [FILTERED] {part}")
-                        continue
+    def _patched_run(cmd, *args, **kwargs):
+        """Block pkg-config calls during Android builds"""
+        if isinstance(cmd, (list, tuple)) and len(cmd) > 0:
+            if 'pkg-config' in str(cmd[0]) or any('pkg-config' in str(arg) for arg in cmd):
+                print(f"[GENESIS PATCH] Blocking pkg-config call: {cmd}")
+                # Return empty result
+                class EmptyResult:
+                    stdout = b''
+                    stderr = b''
+                    returncode = 0
+                return EmptyResult()
+        return _original_run(cmd, *args, **kwargs)
 
-                filtered.append(part)
+    def _patched_Popen(cmd, *args, **kwargs):
+        """Block pkg-config calls during Android builds"""
+        if isinstance(cmd, (list, tuple)) and len(cmd) > 0:
+            if 'pkg-config' in str(cmd[0]) or any('pkg-config' in str(arg) for arg in cmd):
+                print(f"[GENESIS PATCH] Blocking pkg-config call: {cmd}")
+                # Return a process that outputs nothing
+                return _original_Popen(['echo', ''], *args, **kwargs)
+        return _original_Popen(cmd, *args, **kwargs)
 
-            return ' '.join(filtered)
+    # Monkey-patch subprocess module
+    _patch_subprocess.check_output = _patched_check_output
+    _patch_subprocess.run = _patched_run
+    _patch_subprocess.Popen = _patched_Popen
 
-        # Filter CFLAGS, CXXFLAGS, CPPFLAGS
-        for flag_name in ['CFLAGS', 'CXXFLAGS', 'CPPFLAGS']:
-            if flag_name in env:
-                original = env[flag_name]
-                filtered = filter_flags(original)
-                if original != filtered:
-                    info(f"🔍 Filtered {flag_name}:")
-                    env[flag_name] = filtered
+    print("[GENESIS PATCH] pkg-config blocking active for Android build")
 
-        info("✅ Environment filtering complete!")
+# END GENESIS ANDROID PATCH
+'''
+
+                # Find where to insert the patch - after imports, before setup() or build_ext
+                lines = setup_content.split('\n')
+
+                # Look for the last import or from statement
+                last_import_idx = -1
+                for i, line in enumerate(lines):
+                    stripped = line.strip()
+                    if stripped.startswith('import ') or stripped.startswith('from '):
+                        last_import_idx = i
+
+                if last_import_idx >= 0:
+                    info(f"🔍 Inserting patch after line {last_import_idx + 1}...")
+                    lines.insert(last_import_idx + 1, patch_code)
+                    patched_content = '\n'.join(lines)
+
+                    with open(setup_py_path, 'w') as f:
+                        f.write(patched_content)
+
+                    info("✅ setup.py PATCHED successfully!")
+                    info("   pkg-config calls will be blocked during Android build")
+                else:
+                    warning("⚠️  Could not find import statements in setup.py")
+                    warning("   Trying alternative patch location...")
+
+                    # Fallback: insert at the very beginning after shebang/docstring
+                    if lines[0].startswith('#!'):
+                        lines.insert(1, patch_code)
+                    elif lines[0].startswith('"""') or lines[0].startswith("'''"):
+                        # Find end of docstring
+                        quote = lines[0][:3]
+                        for i in range(1, len(lines)):
+                            if quote in lines[i]:
+                                lines.insert(i + 1, patch_code)
+                                break
+                    else:
+                        lines.insert(0, patch_code)
+
+                    patched_content = '\n'.join(lines)
+                    with open(setup_py_path, 'w') as f:
+                        f.write(patched_content)
+
+                    info("✅ setup.py patched at alternative location")
+
+            except Exception as e:
+                warning(f"⚠️  Setup.py patch failed: {e}")
+                warning("   Continuing with unpatched build (may fail)...")
+                import traceback
+                warning(traceback.format_exc())
+
+        info("=" * 70)
+        info("📞 Calling parent build_arch (will build Kivy with patched setup.py)")
+        info("   Expected: No pkg-config → No host paths → Kivy builds ✅")
         info("=" * 70)
 
-        return env
+        # Call parent build_arch
+        super().build_arch(arch)
 
 
 recipe = KivyRecipeBuild46()

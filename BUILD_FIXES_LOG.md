@@ -487,30 +487,35 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
     -I/usr/include/harfbuzz
     -I/usr/include/x86_64-linux-gnu
     ```
-  - These are picked up by Kivy's setup.py via pkg-config on host system
+  - These are picked up by **Kivy's setup.py calling pkg-config** on host system
   - When Android NDK's stdlib.h includes sys/cdefs.h, it finds host version
   - Host cdefs.h incompatible with Android NDK clang cross-compilation
-- **Solution:** Custom Kivy recipe filtering host system include paths
-  - Created: `p4a-recipes/kivy/__init__.py`
-  - Inherits from KivyRecipe
-  - Overrides `get_recipe_env()` to filter CFLAGS/CPPFLAGS
-  - Removes all paths starting with:
-    - `/usr/include/`
-    - `/usr/lib/x86_64-linux-gnu/`
-    - `/usr/lib/aarch64-linux-gnu/`
-    - `/usr/local/include/`
-  - Only filters during Android builds (checks ANDROID_NDK env var)
+- **Failed Approach #1:** Environment filtering via get_recipe_env()
+  - Issue: Kivy's setup.py **bypasses** environment by calling pkg-config directly
+  - Recipe's env filter has no effect on subprocess calls in setup.py
+- **Solution (Build #46 Revised):** Patch Kivy's setup.py to block pkg-config
+  - Modified: `p4a-recipes/kivy/__init__.py`
+  - Overrides `build_arch()` to patch setup.py before compilation
+  - Patches setup.py with subprocess monkey-patch:
+    - Intercepts `subprocess.check_output()`, `subprocess.run()`, `subprocess.Popen()`
+    - Detects pkg-config calls, returns empty output
+    - Only active when ANDROID_NDK or ANDROIDNDK env var set
+  - Insertion point: After last import statement in setup.py
 - **Method:**
-  - Parse CFLAGS/CXXFLAGS/CPPFLAGS as space-separated strings
-  - Filter out `-I/host/path` and `-L/host/path` flags
-  - Preserve all Android NDK and build-specific include paths
-- **Expected Result:** Kivy compiles with Android headers only, no host conflicts
-- **Rationale:** Cross-compilation requires strict separation of host vs target headers
-- **Commit:** [Pending - Build #46]
+  1. Read Kivy's setup.py file
+  2. Find last import statement
+  3. Insert monkey-patch code that:
+     - Saves original subprocess functions
+     - Wraps them to detect and block 'pkg-config' commands
+     - Returns empty bytes/results to prevent host paths
+  4. Call parent build_arch() with patched setup.py
+- **Expected Result:** Kivy setup.py runs without pkg-config, no host paths added
+- **Rationale:** Can't control what setup.py does via environment - must patch the source
+- **Commit:** [Pending - Build #46 Revised]
 
-## 📊 CURRENT STATUS (Updated 2025-11-09) 🔄 BUILD #46 IN PROGRESS
+## 📊 CURRENT STATUS (Updated 2025-11-09) 🔄 BUILD #46 REVISED
 
-**Total Attempts**: 36
+**Total Attempts**: 36 (Build #46 revised with setup.py patching)
 **Success Rate**: 6/36 (Kivy cross-compilation in progress)
 **Root Cause #1**: LT_SYS_SYMBOL_USCORE macro obsolete in autoconf 2.71+ ✅ FIXED (Build #30)
 **Root Cause #2**: src/tramp.c uses open_temp_exec_file() not available on Android ✅ FIXED (Build #30)
