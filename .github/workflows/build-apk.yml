@@ -96,9 +96,23 @@ jobs:
           path: .buildozer
           key: buildozer-${{ hashFiles('buildozer.spec') }}
 
-      - name: Accept Android SDK licenses
+      - name: Pre-install Android SDK components
         run: |
-          yes | sdkmanager --licenses || true
+          # Use the system Android SDK to install required components before buildozer runs
+          echo "Installing Android SDK API 33 components..."
+
+          # The GitHub runner already has Android SDK installed
+          export ANDROID_HOME=/usr/local/lib/android/sdk
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+
+          # Install required SDK components
+          yes | sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2" || true
+
+          # Accept all licenses
+          yes | sdkmanager --sdk_root=$ANDROID_HOME --licenses || true
+
+          echo "✅ Android SDK components installed"
+          ls -la $ANDROID_HOME/platforms/ || echo "Platforms directory not found"
 
       - name: Verify NDK r28+ patches are in place
         run: |
@@ -137,7 +151,19 @@ jobs:
           # Export aclocal path to help libffi find autoconf-archive macros
           export ACLOCAL_PATH="/usr/share/aclocal:${ACLOCAL_PATH}"
           export ACLOCAL="aclocal -I /usr/share/aclocal"
-          # Build the APK (buildozer will handle SDK licenses automatically)
+
+          # Use system Android SDK (already has API 33 installed)
+          # But let buildozer download NDK r28c (required for our patches)
+          export ANDROIDSDK=/usr/local/lib/android/sdk
+          export ANDROIDAPI=33
+          export ANDROIDMINAPI=21
+
+          echo "📍 Using system Android SDK: $ANDROIDSDK"
+          echo "📦 Available Android platforms:"
+          ls -la $ANDROIDSDK/platforms/ || echo "No platforms found"
+          echo "🔧 Buildozer will download NDK r28c as specified in buildozer.spec"
+
+          # Build the APK
           buildozer -v android debug
 
       - name: List built files
