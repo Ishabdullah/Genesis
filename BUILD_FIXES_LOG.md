@@ -468,23 +468,64 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
   - Build #44: `0093ad3` - Correct wrapper function placement after definitions
   - Build #45: `ee10a2f` - Use forward declarations for wrapper functions
 
-## 📊 CURRENT STATUS (Updated 2025-11-08) 🎉 MILESTONE REACHED!
+### Attempt 36: Kivy Cross-Compilation Header Conflicts (Build #46) 🔧
 
-**Total Attempts**: 35
-**Success Rate**: 6/35 (ALL NDK r28+ compatibility issues RESOLVED! ✅)
+- **Date:** 2025-11-09
+- **Issue:** Kivy compilation fails with host system header conflicts
+- **Error:**
+  ```
+  /usr/include/x86_64-linux-gnu/sys/cdefs.h:64:6: error: function-like macro '__GNUC_PREREQ' is not defined
+  ```
+- **Root Cause:**
+  - Building for Android ARM64: `-target aarch64-linux-android21`
+  - But compiler includes **host** x86_64 Linux headers from `/usr/include/x86_64-linux-gnu/`
+  - Host glibc headers use `__GNUC_PREREQ` macro not defined in Android NDK's clang
+- **Analysis:**
+  - Compile command shows host system include paths:
+    ```
+    -I/usr/include/SDL2
+    -I/usr/include/harfbuzz
+    -I/usr/include/x86_64-linux-gnu
+    ```
+  - These are picked up by Kivy's setup.py via pkg-config on host system
+  - When Android NDK's stdlib.h includes sys/cdefs.h, it finds host version
+  - Host cdefs.h incompatible with Android NDK clang cross-compilation
+- **Solution:** Custom Kivy recipe filtering host system include paths
+  - Created: `p4a-recipes/kivy/__init__.py`
+  - Inherits from KivyRecipe
+  - Overrides `get_recipe_env()` to filter CFLAGS/CPPFLAGS
+  - Removes all paths starting with:
+    - `/usr/include/`
+    - `/usr/lib/x86_64-linux-gnu/`
+    - `/usr/lib/aarch64-linux-gnu/`
+    - `/usr/local/include/`
+  - Only filters during Android builds (checks ANDROID_NDK env var)
+- **Method:**
+  - Parse CFLAGS/CXXFLAGS/CPPFLAGS as space-separated strings
+  - Filter out `-I/host/path` and `-L/host/path` flags
+  - Preserve all Android NDK and build-specific include paths
+- **Expected Result:** Kivy compiles with Android headers only, no host conflicts
+- **Rationale:** Cross-compilation requires strict separation of host vs target headers
+- **Commit:** [Pending - Build #46]
+
+## 📊 CURRENT STATUS (Updated 2025-11-09) 🔄 BUILD #46 IN PROGRESS
+
+**Total Attempts**: 36
+**Success Rate**: 6/36 (Kivy cross-compilation in progress)
 **Root Cause #1**: LT_SYS_SYMBOL_USCORE macro obsolete in autoconf 2.71+ ✅ FIXED (Build #30)
 **Root Cause #2**: src/tramp.c uses open_temp_exec_file() not available on Android ✅ FIXED (Build #30)
 **Root Cause #3**: SDL2 ALooper_pollAll deprecated in NDK r28+ ✅ FIXED (Build #34)
-**Root Cause #4**: HarfBuzz function pointer casts too strict in NDK r28+ ✅ FIXED (Build #45 - forward declarations)
-**Root Cause #5**: SDL2_ttf class name unknown (p4a version-dependent) ✅ FIXED (Build #38 - dynamic import)
+**Root Cause #4**: HarfBuzz function pointer casts too strict in NDK r28+ ✅ FIXED (Build #45)
+**Root Cause #5**: SDL2_ttf class name unknown (p4a version-dependent) ✅ FIXED (Build #38)
+**Root Cause #6**: Kivy build includes host system headers during cross-compilation 🔄 IN PROGRESS (Build #46)
 
-**🎉 MAJOR MILESTONE**: All NDK r28+ compatibility patches working!
+**🔄 CURRENT STAGE**: Kivy compilation (Build #46)
 - libffi compiles ✅
 - SDL2 compiles ✅
 - HarfBuzz/SDL2_ttf compiles ✅
-- Build has progressed to Kivy compilation stage
+- Kivy cross-compilation header filtering 🔄
 
-**Latest Commit**: `d29b633` - Docs: Update BUILD_FIXES_LOG with Build #45 forward declarations
+**Latest Commit**: `5bcdca9` - feat: Add comprehensive debugging for debug APK
 **Key Insights**:
 - Pragma directives fail when -Werror elevates warnings to errors
 - C++ files (.cc) need LOCAL_CPPFLAGS, not LOCAL_CFLAGS in Android.mk
