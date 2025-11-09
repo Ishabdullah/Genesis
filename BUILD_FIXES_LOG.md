@@ -512,22 +512,73 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
 - **Rationale:** Simpler than patching - just 5 lines vs 100+ lines, uses standard env override
 - **Commit:** `76c7a48` - Override PKG_CONFIG to disable host pkg-config
 
-## 📊 CURRENT STATUS (Updated 2025-11-09) 🔄 BUILD #46 v2
+### Attempt 37: Kivy OpenGL Function Pointer Type Mismatch (Build #47) 🔧
 
-**Total Attempts**: 36 (Build #46 v2 with PKG_CONFIG override)
-**Success Rate**: 6/36 (Kivy cross-compilation in progress)
+- **Date:** 2025-11-09
+- **Issue:** Kivy's Cython-generated OpenGL code has function pointer type mismatch
+- **Error:**
+  ```
+  kivy/graphics/cgl_backend/cgl_gl.c:3539:52: error: incompatible function pointer types
+  assigning to 'void (*)(GLuint, GLsizei, const GLchar **, const GLint *)' from
+  'void (GLuint, GLsizei, const GLchar *const *, const GLint *)'
+  [-Wincompatible-function-pointer-types]
+  __pyx_v_4kivy_8graphics_3cgl_cgl->glShaderSource = glShaderSource;
+  ```
+- **Root Cause:**
+  - Build #46 v2 successfully eliminated host header conflicts (PKG_CONFIG override working!)
+  - Kivy now compiles much further than before
+  - Multiple Kivy extensions compiled successfully (window_sdl2, img_sdl2, text_sdl2, etc.)
+  - New blocker: NDK r28+ has stricter type checking for function pointer assignments
+  - The difference is in const qualifier position:
+    - Expected: `const GLchar **` (pointer to pointer to char)
+    - Actual: `const GLchar *const *` (pointer to const pointer to char)
+  - This is Cython-generated code (cgl_gl.c), can't patch source .pyx files easily
+- **Analysis:**
+  - Build #46 v2 PKG_CONFIG override SUCCESS evidence:
+    - Environment shows `export PKG_CONFIG='/bin/true'`
+    - NO MORE `/usr/include/x86_64-linux-gnu` paths in compile commands
+    - Multiple Kivy SDL2 extensions compiled successfully
+  - This is safe to suppress - both types are const-correct, just different const positions
+  - The compiler flag `-Wno-incompatible-function-pointer-types` is appropriate here
+- **Solution (Build #47):** Add compiler flag to suppress this specific error
+  - Modified: `p4a-recipes/kivy/__init__.py`
+  - Enhanced `get_recipe_env()` to add CFLAGS modification
+  - Adds `-Wno-incompatible-function-pointer-types` to CFLAGS
+  - This downgrades the error to a warning (or suppresses it entirely)
+- **How It Works:**
+  - get_recipe_env() already overrides PKG_CONFIG (Build #46 v2)
+  - Now also modifies CFLAGS to add the suppression flag
+  - Both fixes work together:
+    1. PKG_CONFIG override prevents host header conflicts
+    2. CFLAGS addition allows OpenGL function pointer assignments
+- **Expected Result:** Kivy compiles fully, all extensions build successfully
+- **Rationale:**
+  - Can't patch Cython-generated C code (will be regenerated)
+  - Patching .pyx source would be complex and fragile
+  - Compiler flag is standard approach for this type of issue
+  - Both function pointer types are const-correct, just different styles
+- **Commits:**
+  - Build #46 v2: `76c7a48` - Override PKG_CONFIG (successful)
+  - Build #47: Pending - Add -Wno-incompatible-function-pointer-types
+
+## 📊 CURRENT STATUS (Updated 2025-11-09) 🔄 BUILD #47
+
+**Total Attempts**: 37 (Build #47 with OpenGL function pointer fix)
+**Success Rate**: 6/37 (Kivy full compilation in progress)
 **Root Cause #1**: LT_SYS_SYMBOL_USCORE macro obsolete in autoconf 2.71+ ✅ FIXED (Build #30)
 **Root Cause #2**: src/tramp.c uses open_temp_exec_file() not available on Android ✅ FIXED (Build #30)
 **Root Cause #3**: SDL2 ALooper_pollAll deprecated in NDK r28+ ✅ FIXED (Build #34)
 **Root Cause #4**: HarfBuzz function pointer casts too strict in NDK r28+ ✅ FIXED (Build #45)
 **Root Cause #5**: SDL2_ttf class name unknown (p4a version-dependent) ✅ FIXED (Build #38)
-**Root Cause #6**: Kivy build includes host system headers during cross-compilation 🔄 IN PROGRESS (Build #46)
+**Root Cause #6**: Kivy build includes host system headers during cross-compilation ✅ FIXED (Build #46 v2)
+**Root Cause #7**: Kivy OpenGL function pointer const qualifier mismatch 🔄 IN PROGRESS (Build #47)
 
-**🔄 CURRENT STAGE**: Kivy compilation (Build #46)
+**🔄 CURRENT STAGE**: Kivy full compilation (Build #47)
 - libffi compiles ✅
 - SDL2 compiles ✅
 - HarfBuzz/SDL2_ttf compiles ✅
-- Kivy cross-compilation header filtering 🔄
+- Kivy host header filtering ✅ (Build #46 v2 PKG_CONFIG override working!)
+- Kivy OpenGL compatibility 🔄 (Build #47 CFLAGS addition)
 
 **Latest Commit**: `5bcdca9` - feat: Add comprehensive debugging for debug APK
 **Key Insights**:
