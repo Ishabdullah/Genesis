@@ -492,30 +492,29 @@ Given the Genesis app's complexity and need for Android APIs, I recommend:
   - Host cdefs.h incompatible with Android NDK clang cross-compilation
 - **Failed Approach #1:** Environment filtering via get_recipe_env()
   - Issue: Kivy's setup.py **bypasses** environment by calling pkg-config directly
-  - Recipe's env filter has no effect on subprocess calls in setup.py
-- **Solution (Build #46 Revised):** Patch Kivy's setup.py to block pkg-config
+  - Env vars don't affect subprocess calls in setup.py
+- **Failed Approach #2:** Patch Kivy's setup.py via build_arch() override
+  - Issue: `build_arch()` method **never called** by p4a for Kivy recipe
+  - No patch logs appeared in build output (unlike libffi/SDL2/HarfBuzz patches)
+  - Kivy may be handled specially by p4a, bypassing custom build_arch()
+- **Solution (Build #46 v2):** Override PKG_CONFIG environment variable
   - Modified: `p4a-recipes/kivy/__init__.py`
-  - Overrides `build_arch()` to patch setup.py before compilation
-  - Patches setup.py with subprocess monkey-patch:
-    - Intercepts `subprocess.check_output()`, `subprocess.run()`, `subprocess.Popen()`
-    - Detects pkg-config calls, returns empty output
-    - Only active when ANDROID_NDK or ANDROIDNDK env var set
-  - Insertion point: After last import statement in setup.py
-- **Method:**
-  1. Read Kivy's setup.py file
-  2. Find last import statement
-  3. Insert monkey-patch code that:
-     - Saves original subprocess functions
-     - Wraps them to detect and block 'pkg-config' commands
-     - Returns empty bytes/results to prevent host paths
-  4. Call parent build_arch() with patched setup.py
-- **Expected Result:** Kivy setup.py runs without pkg-config, no host paths added
-- **Rationale:** Can't control what setup.py does via environment - must patch the source
-- **Commit:** [Pending - Build #46 Revised]
+  - Overrides `get_recipe_env()` (this IS called by p4a)
+  - Sets `env['PKG_CONFIG'] = '/bin/true'`
+  - Sets `env['PKG_CONFIG_PATH'] = ''`
+  - Sets `env['PKG_CONFIG_LIBDIR'] = ''`
+- **How It Works:**
+  - When setup.py calls `pkg-config --cflags sdl2`, it executes `/bin/true --cflags sdl2`
+  - `/bin/true` always exits successfully, outputs nothing
+  - setup.py gets empty output, adds no host paths
+  - Classic Unix trick: simple, reliable, debuggable
+- **Expected Result:** No host paths added, Kivy compiles with Android NDK headers only
+- **Rationale:** Simpler than patching - just 5 lines vs 100+ lines, uses standard env override
+- **Commit:** `76c7a48` - Override PKG_CONFIG to disable host pkg-config
 
-## 📊 CURRENT STATUS (Updated 2025-11-09) 🔄 BUILD #46 REVISED
+## 📊 CURRENT STATUS (Updated 2025-11-09) 🔄 BUILD #46 v2
 
-**Total Attempts**: 36 (Build #46 revised with setup.py patching)
+**Total Attempts**: 36 (Build #46 v2 with PKG_CONFIG override)
 **Success Rate**: 6/36 (Kivy cross-compilation in progress)
 **Root Cause #1**: LT_SYS_SYMBOL_USCORE macro obsolete in autoconf 2.71+ ✅ FIXED (Build #30)
 **Root Cause #2**: src/tramp.c uses open_temp_exec_file() not available on Android ✅ FIXED (Build #30)
