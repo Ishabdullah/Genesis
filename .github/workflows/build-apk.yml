@@ -111,8 +111,17 @@ jobs:
           # Accept all licenses
           yes | sdkmanager --sdk_root=$ANDROID_HOME --licenses || true
 
+          # Create compatibility symlink for buildozer (expects old SDK structure)
+          # Modern SDK: cmdline-tools/latest/bin/sdkmanager
+          # Old SDK: tools/bin/sdkmanager (what buildozer expects)
+          sudo mkdir -p $ANDROID_HOME/tools/bin
+          sudo ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager $ANDROID_HOME/tools/bin/sdkmanager
+          sudo ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/avdmanager $ANDROID_HOME/tools/bin/avdmanager
+
           echo "✅ Android SDK components installed"
+          echo "✅ Created compatibility symlinks for buildozer"
           ls -la $ANDROID_HOME/platforms/ || echo "Platforms directory not found"
+          ls -la $ANDROID_HOME/tools/bin/ || echo "Tools directory not found"
 
       - name: Verify NDK r28+ patches are in place
         run: |
