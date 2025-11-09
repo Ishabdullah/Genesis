@@ -29,7 +29,7 @@ source.exclude_dirs = tests,bin,.git,__pycache__,.github,.buildozer,accel_backen
 source.exclude_patterns = license,images/*.jpg
 
 # (str) Application versioning (method 1)
-version = 2.3.0
+version = 0.1.0
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
@@ -209,7 +209,8 @@ android.accept_sdk_license = True
 #android.meta_data =
 
 # (str) Android logcat filters to use
-#android.logcat_filters = *:S python:D
+# Enable Python debug logs and show all errors/warnings
+android.logcat_filters = *:E python:D
 
 # (bool) Copy library instead of making a libpymodules.so
 #android.copy_libs = 1

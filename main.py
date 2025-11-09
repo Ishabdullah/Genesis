@@ -18,11 +18,34 @@ from kivy.metrics import dp
 import threading
 import sys
 import os
+import logging
+import traceback
 from pathlib import Path
 from datetime import datetime
 
 # Detect if this is a debug build
 DEBUG_MODE = os.environ.get('GENESIS_DEBUG', '1') == '1'
+
+# Configure comprehensive logging for debug builds
+if DEBUG_MODE:
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+        handlers=[
+            logging.StreamHandler(sys.stdout),
+            logging.StreamHandler(sys.stderr)
+        ]
+    )
+    logging.info("=" * 60)
+    logging.info("GENESIS AI ASSISTANT - DEBUG MODE ENABLED")
+    logging.info(f"Python version: {sys.version}")
+    logging.info(f"Platform: {sys.platform}")
+    logging.info(f"Working directory: {os.getcwd()}")
+    logging.info("=" * 60)
+else:
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+logger = logging.getLogger(__name__)
 
 
 class FuturisticTextInput(TextInput):
@@ -115,7 +138,9 @@ class GenesisApp(App):
 
     def build(self):
         """Build the app UI"""
+        logger.info("Building Genesis app UI...")
         self.title = 'Genesis AI Assistant'
+        logger.debug(f"Window size: {Window.size}")
 
         # Set window background
         Window.clearcolor = (0.02, 0.02, 0.08, 1)
@@ -217,6 +242,10 @@ class GenesisApp(App):
             is_user=False
         )
 
+        logger.info("✅ Genesis app UI build complete!")
+        if DEBUG_MODE:
+            logger.debug("Debug mode active - comprehensive logging enabled")
+
         return main_layout
 
     def update_header_rect(self, instance, value):
@@ -243,24 +272,36 @@ class GenesisApp(App):
         """Send message"""
         user_input = self.input_field.text.strip()
         if not user_input:
+            logger.debug("Empty input, ignoring send request")
             return
 
+        logger.info(f"User message: {user_input}")
         self.input_field.text = ''
         self.add_message(user_input, is_user=True)
 
         # Simple echo response for now
         def process_thread():
             try:
+                logger.debug("Processing message in thread...")
                 self.update_status('[color=ffff00]● PROCESSING[/color]')
 
                 # Simple responses
                 response = self.get_simple_response(user_input.lower())
+                logger.debug(f"Generated response: {response[:50]}...")
 
                 self.update_status('[color=00ff00]● READY[/color]')
                 self.add_message(response, is_user=False)
+                logger.info("✅ Message processed successfully")
             except Exception as e:
+                logger.error(f"❌ Error processing message: {str(e)}")
+                if DEBUG_MODE:
+                    logger.error("Full stack trace:")
+                    logger.error(traceback.format_exc())
                 self.update_status('[color=ff0000]● ERROR[/color]')
-                self.add_message(f'Error: {str(e)}', is_user=False)
+                error_msg = f'Error: {str(e)}'
+                if DEBUG_MODE:
+                    error_msg += f'\n\nStack trace:\n{traceback.format_exc()}'
+                self.add_message(error_msg, is_user=False)
 
         threading.Thread(target=process_thread, daemon=True).start()
 
@@ -289,30 +330,48 @@ class GenesisApp(App):
 
     def quick_action(self, action):
         """Handle quick action buttons"""
+        logger.info(f"Quick action triggered: {action}")
+
         action_responses = {
             'Location': 'GPS location feature coming soon!\n\nWill show your current coordinates and address.',
             'Camera': 'Camera integration coming soon!\n\nWill allow photo capture via voice commands.',
             'Light': 'Flashlight control coming soon!\n\nWill toggle your device flashlight on/off.',
             'Info': (
-                'Genesis AI Assistant v2.3.0\n\n'
+                'Genesis AI Assistant v0.1.0-alpha\n\n'
                 'Platform: Android\n'
                 'UI: Futuristic Neon Theme\n'
-                'Status: Preview Version\n\n'
-                'Full features being integrated!'
+                'Status: Early Development\n'
+                f'Debug Mode: {"ON" if DEBUG_MODE else "OFF"}\n\n'
+                'Build system optimization in progress!'
             )
         }
 
         response = action_responses.get(action, 'Feature coming soon!')
         self.add_message(response, is_user=False)
+        logger.debug(f"Quick action '{action}' completed")
 
     def on_pause(self):
         """Handle app pause (Android)"""
+        logger.info("🔄 App pausing (backgrounded)")
         return True
 
     def on_resume(self):
         """Handle app resume (Android)"""
+        logger.info("🔄 App resuming (foregrounded)")
         pass
 
 
 if __name__ == '__main__':
-    GenesisApp().run()
+    try:
+        logger.info("=" * 60)
+        logger.info("Starting Genesis AI Assistant...")
+        logger.info(f"Version: 0.1.0-alpha")
+        logger.info(f"Debug mode: {DEBUG_MODE}")
+        logger.info("=" * 60)
+        GenesisApp().run()
+    except Exception as e:
+        logger.critical(f"❌ FATAL ERROR: App crashed during startup!")
+        logger.critical(f"Error: {str(e)}")
+        logger.critical("Full stack trace:")
+        logger.critical(traceback.format_exc())
+        raise
