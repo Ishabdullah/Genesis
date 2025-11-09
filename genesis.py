@@ -14,7 +14,14 @@ from pathlib import Path
 from memory import MemoryManager
 from executor import CodeExecutor
 from tools import GenesisTools
-from genesis_bridge import GenesisBridge, execute_remote_code
+# Genesis bridge is optional (not needed on Android)
+try:
+    from genesis_bridge import GenesisBridge, execute_remote_code
+    BRIDGE_AVAILABLE = True
+except ImportError:
+    BRIDGE_AVAILABLE = False
+    GenesisBridge = None
+    execute_remote_code = None
 from uncertainty_detector import UncertaintyDetector
 from claude_fallback import ClaudeFallback
 from performance_monitor import PerformanceMonitor
@@ -49,7 +56,7 @@ class Genesis:
         self.memory = MemoryManager()
         self.executor = CodeExecutor()
         self.tools = GenesisTools()
-        self.bridge = GenesisBridge()
+        self.bridge = GenesisBridge() if BRIDGE_AVAILABLE else None
         self.bridge_running = False
         self.uncertainty = UncertaintyDetector()
         self.claude_fallback = ClaudeFallback()
@@ -209,8 +216,9 @@ Example: "Write a script to calculate fibonacci numbers"
         """Start or stop the Genesis-Claude Code bridge"""
         if not self.bridge_running:
             print(f"\n{Colors.CYAN}Starting Genesis Bridge...{Colors.RESET}\n")
-            self.bridge.start()
-            self.bridge_running = True
+            if self.bridge:
+                self.bridge.start()
+                self.bridge_running = True
             print(f"\n{Colors.BOLD}Claude Code can now connect using:{Colors.RESET}")
             print(f'{Colors.DIM}curl -X POST -H "Content-Type: application/json" \\')
             print(f'     -H "X-Genesis-Key: localonly" \\')

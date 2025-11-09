@@ -13,7 +13,11 @@ import json
 import time
 import platform
 import subprocess
-import psutil
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime, timedelta
@@ -87,13 +91,14 @@ def get_battery_level() -> int:
     except Exception:
         pass
 
-    # Fallback: use psutil on regular Linux
-    try:
-        battery = psutil.sensors_battery()
-        if battery:
-            return int(battery.percent)
-    except Exception:
-        pass
+    # Fallback: use psutil on regular Linux (if available)
+    if PSUTIL_AVAILABLE:
+        try:
+            battery = psutil.sensors_battery()
+            if battery:
+                return int(battery.percent)
+        except Exception:
+            pass
 
     return 100  # Assume full if can't detect
 
@@ -112,15 +117,16 @@ def get_cpu_temp() -> float:
     except Exception:
         pass
 
-    # Fallback: psutil
-    try:
-        temps = psutil.sensors_temperatures()
-        if temps:
-            for name, entries in temps.items():
-                if entries:
-                    return entries[0].current
-    except Exception:
-        pass
+    # Fallback: psutil (if available)
+    if PSUTIL_AVAILABLE:
+        try:
+            temps = psutil.sensors_temperatures()
+            if temps:
+                for name, entries in temps.items():
+                    if entries:
+                        return entries[0].current
+        except Exception:
+            pass
 
     return 50.0  # Safe default
 
@@ -128,17 +134,22 @@ def get_cpu_temp() -> float:
 def detect_cpu() -> Dict[str, Any]:
     """Detect CPU cores, frequency, and architecture"""
     try:
-        cores_physical = psutil.cpu_count(logical=False) or os.cpu_count() or 1
-        cores_logical = psutil.cpu_count(logical=True) or cores_physical
+        if PSUTIL_AVAILABLE:
+            cores_physical = psutil.cpu_count(logical=False) or os.cpu_count() or 1
+            cores_logical = psutil.cpu_count(logical=True) or cores_physical
+        else:
+            cores_physical = os.cpu_count() or 1
+            cores_logical = cores_physical
 
         # CPU frequency
         freq = None
-        try:
-            cpu_freq = psutil.cpu_freq()
-            if cpu_freq:
-                freq = cpu_freq.max or cpu_freq.current
-        except Exception:
-            pass
+        if PSUTIL_AVAILABLE:
+            try:
+                cpu_freq = psutil.cpu_freq()
+                if cpu_freq:
+                    freq = cpu_freq.max or cpu_freq.current
+            except Exception:
+                pass
 
         # CPU architecture
         arch = platform.machine()
